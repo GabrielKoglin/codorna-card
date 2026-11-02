@@ -26,7 +26,9 @@ seis atributos**. A arte é toda gerada por código: um avatar 16×16 único par
 moldura que muda com a patente e uma fonte em pixel desenhada para o projeto.
 
 Roda no seu próprio repositório, uma vez por dia. Não tem servidor, não tem cadastro e nenhum
-dado sai do GitHub.
+dado sai do GitHub. Trabalha quase só em repositórios privados? O
+[modo completo](#modo-completo-trabalho-privado-com-token-só-de-leitura-opcional), opcional, conta
+esse trabalho também, com um token só de leitura e sem mostrar nenhum nome privado.
 
 <table>
   <tr>
@@ -87,15 +89,16 @@ Os dois temas têm fundo próprio, então qualquer um deles também fica legíve
 
 ### Entradas
 
-| Entrada                 | Padrão              | O que faz                                                                                                                                         |
-| ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `username`              | dono do repositório | Login do GitHub cuja atividade vira o card.                                                                                                       |
-| `token`                 | `GITHUB_TOKEN`      | Token para ler a API e comitar. O padrão basta; não precisa de token pessoal.                                                                     |
-| `output`                | `codorna-card.svg`  | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                                     |
-| `theme`                 | `dark`              | `dark`, `light` ou `both`.                                                                                                                        |
-| `lang`                  | `pt-BR`             | Idioma do card, dos logs e da mensagem de commit: `pt-BR` ou `en`.                                                                                |
-| `commit`                | `true`              | Comita o SVG no repositório onde o workflow roda. Com `false`, só grava o arquivo no workspace (para você usar em outro step).                    |
-| `private-contributions` | `false`             | Soma ao XP o número de contribuições privadas que o GitHub mostra no seu perfil. Veja [Contribuições privadas](#contribuições-privadas-opcional). |
+| Entrada                 | Padrão              | O que faz                                                                                                                                             |
+| ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `username`              | dono do repositório | Login do GitHub cuja atividade vira o card.                                                                                                           |
+| `token`                 | `GITHUB_TOKEN`      | Token para ler a API e comitar. O padrão basta; não precisa de token pessoal.                                                                         |
+| `output`                | `codorna-card.svg`  | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                                         |
+| `theme`                 | `dark`              | `dark`, `light` ou `both`.                                                                                                                            |
+| `lang`                  | `pt-BR`             | Idioma do card, dos logs e da mensagem de commit: `pt-BR` ou `en`.                                                                                    |
+| `commit`                | `true`              | Comita o SVG no repositório onde o workflow roda. Com `false`, só grava o arquivo no workspace (para você usar em outro step).                        |
+| `private-contributions` | `false`             | Soma ao XP o número de contribuições privadas que o GitHub mostra no seu perfil. Veja [Contribuições privadas](#contribuições-privadas-opcional).     |
+| `private-token`         | vazio               | Token pessoal **só de leitura**, guardado como segredo, que liga o [modo completo](#modo-completo-trabalho-privado-com-token-só-de-leitura-opcional). |
 
 Saídas: `level`, `xp`, `class`, `class-name`, `rank`, `files` e `committed`. O resumo do job
 mostra a conta do XP linha por linha.
@@ -120,17 +123,108 @@ Sem isso o GitHub informa zero e a Action avisa no log. Como o número é públi
 padrão basta para lê-lo; um token pessoal com acesso aos seus repositórios privados mostraria um
 número menor, porque o GitHub só conta como privadas as contribuições que o token não enxerga.
 
+### Modo completo: trabalho privado com token só de leitura (opcional)
+
+No modo completo, a Action conta também os seus commits, PRs, issues e reviews nos repositórios
+privados, **com as mesmas regras e tetos do público**, usando um token pessoal só de leitura:
+
+```yaml
+- uses: GabrielKoglin/codorna-card@v1
+  with:
+    private-token: ${{ secrets.CODORNA_TOKEN }}
+```
+
+- **O que entra:** os seus commits (pela sua conta) na branch padrão dos repositórios privados que
+  o token enxerga, sem forks; os PRs abertos e mesclados (com o bônus de repositório de outra
+  pessoa ou organização), as issues e os reviews em PRs de outras pessoas; e as linguagens dos
+  seus repositórios privados, na classe e na barra de linguagens.
+- **Os tetos valem para a soma:** só os 10 primeiros commits de cada dia contam, somando público
+  e privado do mesmo dia; os tetos anuais valem para a soma do ano.
+- **Privacidade:** nenhum nome de repositório, organização, branch, mensagem de commit ou título
+  aparece no card, nos logs, no resumo ou nas saídas. O card mostra só o total, como
+  "1.260 privadas", e o resumo do job ganha uma coluna "Privado". O token é mascarado nos logs.
+- **Só leitura:** o `private-token` nunca escreve nada; o commit do SVG continua com o
+  `GITHUB_TOKEN` (entrada `token`).
+- **Junto com `private-contributions`:** pode ligar os dois. Com o token, o total anônimo é lido
+  por ele e soma só o que nem ele enxerga, então nada conta duas vezes.
+
+Repositório de organização com SSO ou que o token não consegue ler é pulado, e o log diz só
+quantos. Tudo em detalhes: [modo completo nas regras](docs/regras.md#modo-completo-private-token-opcional).
+
+#### Passo a passo do token (fine-grained, só leitura)
+
+Atalho: [este link](https://github.com/settings/personal-access-tokens/new?name=Codorna+Card&description=Modo+completo+do+Codorna+Card+%28so+leitura%29&expires_in=366&metadata=read&contents=read&pull_requests=read&issues=read)
+abre a criação do token já com nome, validade e as quatro permissões de leitura. Confira tudo
+antes de gerar.
+
+1. **Crie o token.** No GitHub: foto do perfil → **Settings** → **Developer settings** →
+   **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. **Nome e validade.** Em **Token name**, `Codorna Card`. Em **Expiration**, escolha uma validade
+   (até 366 dias). Quando o token vencer, a Action falha com uma mensagem clara e o card anterior
+   continua no lugar: gere outro e atualize o segredo.
+3. **Dono.** Em **Resource owner**, a sua conta (para organizações, veja abaixo).
+4. **Repositórios.** Em **Repository access**, **All repositories** (todos os seus, inclusive os
+   que você criar depois) ou **Only select repositories** (escolha na lista). O que ficar de fora
+   não conta.
+5. **Permissões.** Em **Permissions** → **Repository permissions**, todas como **Read-only**:
+
+   | Permissão     | Para quê                                                         |
+   | ------------- | ---------------------------------------------------------------- |
+   | Metadata      | listar os repositórios e as linguagens (o GitHub inclui sozinho) |
+   | Contents      | ler o histórico de commits                                       |
+   | Pull requests | contar PRs abertos, PRs mesclados e reviews                      |
+   | Issues        | contar issues                                                    |
+
+   Nenhuma permissão de conta (**Account permissions**) é necessária.
+
+6. **Gere e copie.** Clique em **Generate token** e copie o valor (ele só aparece uma vez).
+7. **Salve como segredo.** No repositório do seu perfil: **Settings** → **Secrets and variables**
+   → **Actions** → **New repository secret**. Nome `CODORNA_TOKEN`, valor: o token.
+8. **Use no workflow.** `private-token: ${{ secrets.CODORNA_TOKEN }}`, como no exemplo acima e no
+   [`examples/workflow.yml`](examples/workflow.yml).
+
+Quer conferir antes de ligar na Action? Rode a [prévia local](#prévia-local) com
+`--private-token` e o token na variável `CODORNA_TOKEN`.
+
+**Repositórios de organização.** Um token fine-grained só enxerga os repositórios de **um** dono,
+o escolhido em **Resource owner**: a sua conta **ou** uma organização. Para contar os repositórios
+privados de uma organização, crie o token com ela como dono. Se ela exige aprovação, o token fica
+pendente e só lê dados públicos até um administrador aprovar (para quem é dono da organização, a
+aprovação é automática); organizações que bloqueiam tokens fine-grained nem aparecem na lista.
+Pelas regras do GitHub, um fine-grained também não alcança várias organizações de uma vez nem
+repositórios de outras pessoas em que você é colaborador. O que o token não alcança fica fora do
+modo completo (e, com `private-contributions`, entra no total anônimo).
+
+**Alternativa: token clássico, com aviso.** Se o seu trabalho está espalhado entre a sua conta,
+organizações e repositórios de outras pessoas, um token clássico (**Tokens (classic)**) com o
+escopo `repo` enxerga tudo de uma vez. **Cuidado: o escopo `repo` dá acesso total, inclusive de
+escrita, a todos os repositórios que você acessa.** Não existe escopo clássico só de leitura para
+repositórios privados. O Codorna Card só lê (o cliente do `private-token` recusa qualquer
+escrita), mas um token `repo` vazado permite alterar ou apagar código. Se usar: validade curta,
+segredo só no repositório do perfil e, em organização com SAML SSO, autorize o token em
+**Configure SSO** → **Authorize** (o fine-grained é autorizado na própria criação). Sem isso, os
+repositórios dela são pulados.
+
+Fontes (documentação do GitHub):
+[tokens pessoais e limitações do fine-grained](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens),
+[fine-grained na API GraphQL](https://github.blog/changelog/2023-04-27-graphql-improvements-for-fine-grained-pats-and-github-apps/),
+[busca com fine-grained](https://docs.github.com/en/rest/search/search),
+[permissões do fine-grained](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens),
+[escopos do token clássico](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps)
+e [SSO](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/authorizing-a-personal-access-token-for-use-with-single-sign-on).
+
 ### Regras (resumo)
 
-| Atividade                                  |           XP | Teto contra farm                     |
-| ------------------------------------------ | -----------: | ------------------------------------ |
-| Commit                                     |            2 | 10 por dia                           |
-| Issue aberta                               |            4 | 150 por ano                          |
-| PR aberto                                  |            5 | 250 por ano                          |
-| Review de PR                               |            8 | 250 por ano                          |
-| PR mesclado                                |          +10 | até o número de PRs abertos contados |
-| PR mesclado no repositório de outra pessoa | +10 de bônus | idem                                 |
-| Contribuição privada (opcional)            |            1 | 1.000 por ano                        |
+| Atividade                                  |                 XP | Teto contra farm                      |
+| ------------------------------------------ | -----------------: | ------------------------------------- |
+| Commit                                     |                  2 | 10 por dia                            |
+| Issue aberta                               |                  4 | 150 por ano                           |
+| PR aberto                                  |                  5 | 250 por ano                           |
+| Review de PR                               |                  8 | 250 por ano                           |
+| PR mesclado                                |                +10 | até o número de PRs abertos contados  |
+| PR mesclado no repositório de outra pessoa |       +10 de bônus | idem                                  |
+| Contribuição privada (opcional)            |                  1 | 1.000 por ano                         |
+| Atividade privada (modo completo)          | a mesma do público | os mesmos, sobre a soma com o público |
 
 - **Nível:** chegar ao nível N custa 50 × (N − 1)² XP, até o 99.
 - **Patente:** Recruta, Aprendiz, Veterano, Mestre, Lenda e Mítico. A moldura muda de madeira
@@ -150,24 +244,29 @@ Tudo em detalhes, com as fórmulas: [`docs/regras.md`](docs/regras.md).
 
 **Usa dados privados?** Por padrão, não. Repositórios privados são descartados mesmo que o token
 consiga vê-los. Com `private-contributions: true`, entra só o número de contribuições privadas que
-o GitHub já mostra publicamente no seu perfil, sem nenhum detalhe.
+o GitHub já mostra publicamente no seu perfil, sem nenhum detalhe. Com `private-token`, o
+[modo completo](#modo-completo-trabalho-privado-com-token-só-de-leitura-opcional) conta o trabalho
+nos repositórios privados que o seu token enxerga, só em totais.
 
 **Preciso criar um token pessoal?** Não. O `GITHUB_TOKEN` do próprio workflow lê os dados
-públicos e comita o card. Só precisa de `permissions: contents: write` (já está no exemplo).
+públicos e comita o card. Só precisa de `permissions: contents: write` (já está no exemplo). Um
+token pessoal, só de leitura, só entra no modo completo, que é opcional.
 
 **O commit diário vai inflar as minhas contribuições?** Não. O commit é feito em nome do
 `github-actions[bot]` e só acontece quando o card muda.
 
 **Por que meus números não batem com o gráfico do perfil?** O gráfico pode incluir
-contribuições privadas e não tem tetos. O card usa só o que é público (e, se você ligar
-`private-contributions`, o total de privadas) e aplica os tetos contra farm. O total de cada tipo
-aparece no resumo do job.
+contribuições privadas e não tem tetos. O card usa só o que é público (e, se você ligar, o total
+de privadas ou o modo completo) e aplica os tetos contra farm. O total de cada tipo aparece no
+resumo do job.
 
 **Posso usar em uma organização?** O card é de pessoas. Em um repositório de organização,
 informe o seu login em `username`.
 
 **Quanto tempo leva?** A Action faz uma consulta por ano de conta, mais as de repositórios,
-uma de cada vez para respeitar os limites da API. Contas antigas levam mais que contas novas.
+uma de cada vez para respeitar os limites da API. Contas antigas levam mais que contas novas. No
+modo completo, entra mais uma consulta por repositório privado a cada 100 commits seus e uma por
+ano para as buscas.
 
 **E se eu bater no limite da API?** A Action tenta de novo nas falhas temporárias e, se o limite
 acabar, mostra a hora em que ele renova. O próximo agendamento resolve sozinho.
@@ -189,7 +288,8 @@ npm run preview -- --user seu-login
 
 O card sai em `preview/` (os dois temas em SVG e PNG, mais os dados lidos em `seu-login.json`) e
 nada é comitado. Opções: `--lang en`, `--private` (soma as contribuições privadas, como
-`private-contributions`) e `--out outra-pasta`. Funciona igual no Windows (PowerShell) e no Linux.
+`private-contributions`), `--private-token` (modo completo, como a entrada `private-token`) e
+`--out outra-pasta`. Funciona igual no Windows (PowerShell) e no Linux.
 
 O token vem da variável `GITHUB_TOKEN` e, se ela estiver vazia, do GitHub CLI (`gh auth token`):
 quem já fez `gh auth login` não precisa configurar nada. Sem o `gh`, crie um token sem permissão
@@ -210,6 +310,26 @@ npm run preview -- --user seu-login
 Com `--private`, lembre que o GitHub só conta como privadas as contribuições que o token não
 enxerga. Com o seu próprio token (ou o do `gh`), o número tende a sair menor que o da Action.
 
+Com `--private-token`, o token do modo completo vem da variável `CODORNA_TOKEN` e, se ela estiver
+vazia, também do `gh auth token`. Para testar o seu token fine-grained antes de ligar na Action,
+ponha-o na variável (nunca na linha de comando: a prévia recusa):
+
+```powershell
+# PowerShell (Windows)
+$env:CODORNA_TOKEN = "github_pat_..."
+npm run preview -- --user seu-login --private-token
+```
+
+```bash
+# bash/zsh (Linux, macOS)
+export CODORNA_TOKEN=github_pat_...
+npm run preview -- --user seu-login --private-token
+```
+
+A tela e os arquivos da prévia mostram só totais e linguagens, nenhum nome privado. Para voltar a
+usar o token do `gh`, esvazie a variável (`Remove-Item Env:CODORNA_TOKEN` no PowerShell,
+`unset CODORNA_TOKEN` no bash).
+
 ### Como contribuir
 
 Contribuições são bem-vindas: linguagens que faltam no mapa de classes, arte, traduções,
@@ -223,6 +343,9 @@ npm run demo                      # exemplos em examples/ (SVG e PNG)
 npm run assets                    # logo, codorna, prévias sociais e GIF em assets/
 npm run build                     # empacota a Action em dist/
 ```
+
+As regras do jogo ficam em [`src/game/`](src/game), sem I/O nem API, com o ponto de entrada
+documentado em [`src/game/index.ts`](src/game/index.ts).
 
 ### Créditos
 
@@ -241,7 +364,10 @@ the languages of your repositories) and draws an RPG card with **level, XP, clas
 attributes**. All the art is generated by code: a unique 16×16 avatar for your username, a frame
 that changes with your rank and a pixel font made for this project.
 
-It runs in your own repository once a day. No server, no sign-up, and no data leaves GitHub.
+It runs in your own repository once a day. No server, no sign-up, and no data leaves GitHub. Do
+you work almost only in private repositories? The optional
+[full mode](#full-mode-private-work-with-a-read-only-token-optional) counts that work too, with a
+read-only token and without showing any private name.
 
 <table>
   <tr>
@@ -297,6 +423,7 @@ Both themes have their own background, so either one is also readable on its own
 | `lang`                  | `pt-BR`            | Language of the card, logs and commit message: `pt-BR` or `en`.                                                                                 |
 | `commit`                | `true`             | Commits the SVG to the repository running the workflow. With `false`, it only writes the file to the workspace (for another step to use).       |
 | `private-contributions` | `false`            | Adds to your XP the number of private contributions GitHub shows on your profile. See [Private contributions](#private-contributions-optional). |
+| `private-token`         | empty              | A **read-only** personal token, stored as a secret, that turns on [full mode](#full-mode-private-work-with-a-read-only-token-optional).         |
 
 Outputs: `level`, `xp`, `class`, `class-name`, `rank`, `files` and `committed`. The job summary
 shows the XP math line by line.
@@ -322,17 +449,109 @@ it GitHub reports zero and the Action warns you in the log. Since the number is 
 would show a smaller number, because GitHub only counts as private the contributions the token
 cannot see.
 
+### Full mode: private work with a read-only token (optional)
+
+In full mode, the Action also counts your commits, PRs, issues and reviews in private
+repositories, **with the same rules and caps as public work**, using a read-only personal token:
+
+```yaml
+- uses: GabrielKoglin/codorna-card@v1
+  with:
+    private-token: ${{ secrets.CODORNA_TOKEN }}
+```
+
+- **What counts:** your commits (by your account) on the default branch of the private
+  repositories the token can see, no forks; opened and merged PRs (with the bonus for someone
+  else's or an organization's repository), issues and reviews on other people's PRs; and the
+  languages of your own private repositories, for the class and the language bar.
+- **Caps apply to the sum:** only the first 10 commits of each day count, adding public and private
+  on the same day; the yearly caps apply to the year's sum.
+- **Privacy:** no repository, organization or branch name, commit message or title shows up on the
+  card, in the logs, in the summary or in the outputs. The card only shows the total, like
+  "1,260 private", and the job summary gets a "Private" column. The token is masked in the logs.
+- **Read-only:** the `private-token` never writes anything; the SVG commit still uses
+  `GITHUB_TOKEN` (the `token` input).
+- **Together with `private-contributions`:** you can turn on both. With the token, the anonymous
+  total is read by it and only adds what not even it can see, so nothing counts twice.
+
+An organization repository with SSO, or one the token can't read, is skipped, and the log only
+says how many. Full details: [full mode in the rules](docs/rules.md#full-mode-private-token-optional).
+
+#### Token step by step (fine-grained, read-only)
+
+Shortcut: [this link](https://github.com/settings/personal-access-tokens/new?name=Codorna+Card&description=Codorna+Card+full+mode+%28read-only%29&expires_in=366&metadata=read&contents=read&pull_requests=read&issues=read)
+opens the token form with the name, expiration and the four read permissions already filled in.
+Check everything before generating it.
+
+1. **Create the token.** On GitHub: profile picture → **Settings** → **Developer settings** →
+   **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. **Name and expiration.** **Token name**: `Codorna Card`. Under **Expiration**, pick an
+   expiration (up to 366 days). When the token expires, the Action fails with a clear message and
+   the previous card stays in place: create a new one and update the secret.
+3. **Owner.** Under **Resource owner**, your account (for organizations, see below).
+4. **Repositories.** Under **Repository access**, **All repositories** (all of yours, including the
+   ones you create later) or **Only select repositories** (pick them from the list). Whatever is
+   left out doesn't count.
+5. **Permissions.** Under **Permissions** → **Repository permissions**, all **Read-only**:
+
+   | Permission    | What for                                                        |
+   | ------------- | --------------------------------------------------------------- |
+   | Metadata      | list the repositories and languages (GitHub adds it on its own) |
+   | Contents      | read the commit history                                         |
+   | Pull requests | count opened PRs, merged PRs and reviews                        |
+   | Issues        | count issues                                                    |
+
+   No account permissions (**Account permissions**) are needed.
+
+6. **Generate and copy.** Click **Generate token** and copy the value (it is only shown once).
+7. **Store it as a secret.** In your profile repository: **Settings** → **Secrets and variables**
+   → **Actions** → **New repository secret**. Name `CODORNA_TOKEN`, value: the token.
+8. **Use it in the workflow.** `private-token: ${{ secrets.CODORNA_TOKEN }}`, as in the example
+   above and in [`examples/workflow.yml`](examples/workflow.yml).
+
+Want to check it before turning it on in the Action? Run the [local preview](#local-preview) with
+`--private-token` and the token in the `CODORNA_TOKEN` variable.
+
+**Organization repositories.** A fine-grained token only sees the repositories of **one** owner,
+the one picked under **Resource owner**: your account **or** an organization. To count an
+organization's private repositories, create the token with it as the owner. If it requires
+approval, the token stays pending and only reads public data until an administrator approves it
+(organization owners are approved automatically); organizations that block fine-grained tokens
+don't even show up in the list. By GitHub's rules, a fine-grained token also can't reach several
+organizations at once, nor other people's repositories where you are a collaborator. Whatever the
+token can't reach stays out of full mode (and, with `private-contributions`, goes into the
+anonymous total).
+
+**Alternative: classic token, with a warning.** If your work is spread across your account,
+organizations and other people's repositories, a classic token (**Tokens (classic)**) with the
+`repo` scope sees everything at once. **Careful: the `repo` scope grants full access, including
+write access, to every repository you can access.** There is no read-only classic scope for private
+repositories. Codorna Card only reads (the `private-token` client refuses any write), but a leaked
+`repo` token lets someone change or delete code. If you use one: short expiration, the secret only
+in your profile repository and, in organizations with SAML SSO, authorize the token under
+**Configure SSO** → **Authorize** (fine-grained tokens are authorized when they are created).
+Without that, its repositories are skipped.
+
+Sources (GitHub docs):
+[personal tokens and fine-grained limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens),
+[fine-grained tokens in the GraphQL API](https://github.blog/changelog/2023-04-27-graphql-improvements-for-fine-grained-pats-and-github-apps/),
+[search with fine-grained tokens](https://docs.github.com/en/rest/search/search),
+[fine-grained permissions](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens),
+[classic token scopes](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps)
+and [SSO](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/authorizing-a-personal-access-token-for-use-with-single-sign-on).
+
 ### Rules (summary)
 
-| Activity                               |        XP | Anti-farm cap                          |
-| -------------------------------------- | --------: | -------------------------------------- |
-| Commit                                 |         2 | 10 per day                             |
-| Opened issue                           |         4 | 150 per year                           |
-| Opened PR                              |         5 | 250 per year                           |
-| PR review                              |         8 | 250 per year                           |
-| Merged PR                              |       +10 | up to the number of counted opened PRs |
-| PR merged in someone else's repository | +10 bonus | same                                   |
-| Private contribution (optional)        |         1 | 1,000 per year                         |
+| Activity                               |             XP | Anti-farm cap                          |
+| -------------------------------------- | -------------: | -------------------------------------- |
+| Commit                                 |              2 | 10 per day                             |
+| Opened issue                           |              4 | 150 per year                           |
+| Opened PR                              |              5 | 250 per year                           |
+| PR review                              |              8 | 250 per year                           |
+| Merged PR                              |            +10 | up to the number of counted opened PRs |
+| PR merged in someone else's repository |      +10 bonus | same                                   |
+| Private contribution (optional)        |              1 | 1,000 per year                         |
+| Private activity (full mode)           | same as public | the same, on the sum with public       |
 
 - **Level:** reaching level N costs 50 × (N − 1)² XP, up to 99.
 - **Rank:** Recruit, Apprentice, Veteran, Master, Legend and Mythic. The frame goes from wood to
@@ -353,24 +572,27 @@ Full details and formulas: [`docs/rules.md`](docs/rules.md) (em português:
 
 **Does it use private data?** Not by default. Private repositories are dropped even if the token
 can see them. With `private-contributions: true`, only the number of private contributions GitHub
-already shows publicly on your profile is added, with no details.
+already shows publicly on your profile is added, with no details. With `private-token`,
+[full mode](#full-mode-private-work-with-a-read-only-token-optional) counts the work in the
+private repositories your token can see, as totals only.
 
 **Do I need a personal token?** No. The workflow's own `GITHUB_TOKEN` reads public data and
-commits the card. It only needs `permissions: contents: write` (already in the example).
+commits the card. It only needs `permissions: contents: write` (already in the example). A
+read-only personal token is only used by full mode, which is optional.
 
 **Will the daily commit inflate my contributions?** No. The commit is authored by
 `github-actions[bot]` and only happens when the card changes.
 
 **Why don't my numbers match my profile graph?** The graph may include private contributions
-and has no caps. The card only uses public data (plus the private total, if you turn on
-`private-contributions`) and applies the anti-farm caps. The job summary shows the total of each
-type.
+and has no caps. The card only uses public data (plus, if you turn them on, the private total or
+full mode) and applies the anti-farm caps. The job summary shows the total of each type.
 
 **Can I use it for an organization?** Cards are for people. In an organization repository, set
 your own login in `username`.
 
 **How long does it take?** The Action makes one query per year of account age, plus the
-repository queries, one at a time to respect API limits. Older accounts take longer.
+repository queries, one at a time to respect API limits. Older accounts take longer. Full mode adds
+one query per private repository for every 100 of your commits, and one per year for the searches.
 
 **What if I hit the API rate limit?** The Action retries temporary failures and, if the limit
 runs out, tells you when it resets. The next scheduled run fixes it on its own.
@@ -389,8 +611,9 @@ npm run preview -- --user your-login
 
 The card is written to `preview/` (both themes as SVG and PNG, plus the data it read in
 `your-login.json`) and nothing is committed. Options: `--lang en`, `--private` (adds private
-contributions, like `private-contributions`) and `--out other-folder`. It works the same on Windows
-(PowerShell) and Linux.
+contributions, like `private-contributions`), `--private-token` (full mode, like the
+`private-token` input) and `--out other-folder`. It works the same on Windows (PowerShell) and
+Linux.
 
 The token comes from the `GITHUB_TOKEN` variable and, if it is empty, from the GitHub CLI
 (`gh auth token`): if you already ran `gh auth login`, there is nothing to set up. Without `gh`,
@@ -412,6 +635,26 @@ npm run preview -- --user your-login
 With `--private`, keep in mind that GitHub only counts as private the contributions the token
 cannot see. With your own token (or the `gh` one), the number tends to be lower than in the Action.
 
+With `--private-token`, the full-mode token comes from the `CODORNA_TOKEN` variable and, if it is
+empty, also from `gh auth token`. To try your fine-grained token before turning it on in the
+Action, put it in the variable (never on the command line: the preview refuses it):
+
+```powershell
+# PowerShell (Windows)
+$env:CODORNA_TOKEN = "github_pat_..."
+npm run preview -- --user your-login --private-token
+```
+
+```bash
+# bash/zsh (Linux, macOS)
+export CODORNA_TOKEN=github_pat_...
+npm run preview -- --user your-login --private-token
+```
+
+The preview screen and files only show totals and languages, no private names. To go back to the
+`gh` token, clear the variable (`Remove-Item Env:CODORNA_TOKEN` in PowerShell, `unset CODORNA_TOKEN`
+in bash).
+
 ### Contributing
 
 Contributions are welcome: missing languages in the class map, art, translations, fixes. See
@@ -425,6 +668,9 @@ npm run demo                      # examples in examples/ (SVG and PNG)
 npm run assets                    # logo, quail, social previews and GIF in assets/
 npm run build                     # bundles the Action into dist/
 ```
+
+The game rules live in [`src/game/`](src/game), with no I/O or API calls, and a documented entry
+point in [`src/game/index.ts`](src/game/index.ts).
 
 ### Credits
 

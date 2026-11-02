@@ -28,3 +28,6 @@ jobs:
         #   output: codorna-card.svg
         #   username: outro-login
         #   private-contributions: true  # soma o total de privadas do perfil / adds your private total
+        #   # Modo completo: conta seus repositórios privados com um token só de leitura (veja o README).
+        #   # Full mode: counts your private repositories with a read-only token (see the README).
+        #   private-token: ${{ secrets.CODORNA_TOKEN }}

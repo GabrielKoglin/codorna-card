@@ -16,6 +16,10 @@ on:
         description: Somar o total de contribuições privadas do perfil
         type: boolean
         default: false
+      private-token:
+        description: Modo completo, com o segredo CODORNA_TOKEN (token só de leitura)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,6 +39,8 @@ jobs:
           theme: both
           commit: false
           private-contributions: ${{ inputs.private-contributions }}
+          # Vazio quando a opção está desligada: aí nada privado é lido.
+          private-token: ${{ inputs.private-token && secrets.CODORNA_TOKEN || '' }}
 
       - name: Resultado
         env:

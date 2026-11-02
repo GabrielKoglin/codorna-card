@@ -8,9 +8,12 @@ version.
 
 Principles:
 
-- **Public data only.** Nothing private goes into the math, even if the token can see it. The
-  only exception is optional and off by default: with `private-contributions: true`, the number of
-  private contributions GitHub already shows on your profile is added (just the total, no details).
+- **Public data by default.** Nothing private goes into the math unless you ask for it, even if
+  the token can see it. There are two options, off by default: `private-contributions: true` adds
+  the number of private contributions GitHub already shows on your profile, and `private-token`
+  ([full mode](#full-mode-private-token-optional)) counts the work in the private repositories a
+  read-only token of yours can see. Either way, only totals are used: no private name shows up
+  anywhere.
 - **Open rules.** Anyone can redo the math for their own card.
 - **Consistency beats volume.** Daily and yearly caps keep farming from turning into levels.
 - **The card only changes when the numbers change.** There is no "updated at" date in the SVG, so
@@ -32,8 +35,10 @@ the account creation until the day of the run.
 | Languages                                 | Owned, public, non-fork repositories (up to the 1,000 most recently pushed), with the 10 largest languages of each.                                                                                                        |
 | Private contributions (optional)          | Only with `private-contributions: true`: the `restrictedContributionsCount` field for each year, the same anonymous total GitHub shows on the profile graph. See [Private contributions](#private-contributions-optional). |
 
-In every list, repositories marked as private are dropped. The "private contributions" GitHub
-shows anonymously on the profile only count with `private-contributions: true`.
+In all of these lists, repositories marked as private are dropped. The "private contributions"
+GitHub shows anonymously on the profile only count with `private-contributions: true`, and the work
+in private repositories only counts in full mode, which reads it separately (see
+[Full mode](#full-mode-private-token-optional)).
 
 API limits worth knowing: in each period the API lists up to 100 repositories per contribution
 type. People who contribute to more than 100 repositories in the same year may have the least
@@ -50,6 +55,10 @@ active ones left out (the Action warns about it in the log).
 | Merged PR                              |       +10 | Never counts more merged PRs than counted opened PRs.                     |
 | PR merged in someone else's repository | +10 bonus | The same limit as above.                                                  |
 | Private contribution (optional)        |         1 | 1,000 per year. Only with `private-contributions: true`.                  |
+
+In full mode, commits, issues, PRs and reviews from private repositories follow this same table,
+and each cap applies to **public and private combined**: the daily one on the same day, the yearly
+ones in the same year. Details in [Full mode](#full-mode-private-token-optional).
 
 In practice:
 
@@ -89,7 +98,8 @@ and nobody outside can check it. That is why it is worth half a public commit an
 people who work a lot in private earn up to 1,000 XP per year (the same as 500 public commits), and
 farming in a private repository can't go beyond that.
 
-**What doesn't change.** Attributes, class and languages still use public data only.
+**What doesn't change.** Attributes, class and languages don't use this number (only full mode
+brings private activity into them).
 
 **On the card.** The footer only shows the total, like `3,456 private` (`3.456 privadas` in
 Portuguese), and the accessible description says "3,456 private contributions". The job summary
@@ -98,7 +108,88 @@ shows the math.
 **Token.** The default `GITHUB_TOKEN` is enough, because the number is public. One detail:
 contributions in private repositories the token can see are no longer "restricted" for it (and
 those repositories are dropped). That is why a personal token with access to your private
-repositories shows a smaller number. Use the default one.
+repositories shows a smaller number. Without full mode, use the default one. In full mode, the
+number is read with the `private-token` itself on purpose: see
+[No double counting](#no-double-counting).
+
+## Full mode (`private-token`, optional)
+
+For people who work almost only in private repositories and want that work to count **with the
+same rules as public work**, not just as an anonymous total. It is off by default.
+
+**How to turn it on.** Create a read-only personal token, store it as a secret (for example,
+`CODORNA_TOKEN`) and pass it in the `private-token: ${{ secrets.CODORNA_TOKEN }}` input. The
+step-by-step for the token, with its permissions, is in the
+[README](../README.md#full-mode-private-work-with-a-read-only-token-optional). The `token` input
+is still `GITHUB_TOKEN`: it does the public reads and the SVG commit. The `private-token` only
+reads: its client refuses any write (GraphQL mutation or non-GET REST call).
+
+**Why straight from the repositories.** The API's `contributionsCollection` (the source of the
+public flow) is not reliable for private work: on the author's account, even with a token that
+sees 25 private repositories, it only returned the public ones. Counting straight from the
+repositories worked.
+
+**What is read**, always with the `private-token`:
+
+| Data                        | How it is read                                                                                                                                                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repositories                | `viewer.repositories` with `ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]`, `privacy: PRIVATE` and `isFork: false`, 100 at a time (up to the 1,000 most recently pushed).                                         |
+| Commits                     | `history(author: {id: <your id>}, since: <account creation>)` on each default branch, 100 at a time. The day is the author date in UTC.                                                                                           |
+| Opened PRs, issues, reviews | Searches with `is:private` and a date range per year (`created:`), the same years as the public flow: `is:pr is:private author:LOGIN`, `is:issue is:private author:LOGIN` and `is:pr is:private reviewed-by:LOGIN -author:LOGIN`. |
+| Merged PRs                  | `is:pr is:merged is:private author:LOGIN`, all time; the bonus uses the same search with `-user:LOGIN` (someone else's or an organization's repository).                                                                          |
+| Languages                   | The 10 largest languages of each **owned** private repository that was read (organization and other people's repositories don't vote, like in the public flow).                                                                   |
+| Anonymous contributions     | Only with `private-contributions: true`: `restrictedContributionsCount` read with the `private-token`.                                                                                                                            |
+
+**Same rules, caps on the sum.** Private activity is worth the same XP as public activity, and each
+cap applies to both combined: only the first 10 commits of each day count, adding public and
+private on the same day; issues, opened PRs and reviews have the yearly cap on the year's sum;
+merged PRs (public + private) never exceed the counted opened PRs. That way nobody doubles a cap by
+splitting work between public and private. Days with private commits count for CON, and owned
+private repositories vote for the class, show up in the language bar and count for INT.
+
+**Counting details:**
+
+- Only your commits, by your account id: other people's commits in the same repository don't count.
+- The same commit in two private repositories (a copy, for example) counts once.
+- Commits authored before the account was created don't count, like in the public flow.
+- A review on your own PR doesn't count (`-author:LOGIN`): reviews are worth more because they
+  involve another person.
+- GitHub search can't filter by review date, so a review counts in the year the PR was opened.
+- Each private repository reads at most 10,000 of your commits (the most recent); above that the
+  Action warns you, without naming the repository.
+
+### No double counting
+
+Each contribution comes in through one path only:
+
+1. **Public** (`GITHUB_TOKEN`): only public repositories; private ones that show up in the lists
+   are dropped.
+2. **Full mode** (`private-token`): only repositories with `privacy: PRIVATE` and no forks, and
+   searches with `is:private`. Public and private never overlap.
+3. **Anonymous** (`restrictedContributionsCount`): GitHub only counts the contributions **the
+   viewer cannot see**. Without `private-token`, the viewer is `GITHUB_TOKEN`, which sees nothing
+   private: the whole anonymous total counts. With `private-token`, the number is queried with the
+   `private-token` itself: only what not even it can see counts (for example, an organization the
+   token can't reach). What the token can see was already counted in item 2.
+
+Without `private-token`, everything works exactly as before.
+
+### Privacy
+
+Hard rule: no private repository name, private organization name, branch name, commit message or
+PR or issue title shows up anywhere (SVG, logs, job summary, Action outputs, preview files, error
+messages). Full-mode queries don't even ask for those fields: only opaque ids, dates, counts and
+language names. `private-token` errors don't carry the text GitHub sends back, because it may name
+organizations. The token is masked in the logs (`::add-mask::`), like `@actions/core` does.
+
+**Skipped repositories.** An organization repository with SAML SSO where the token was not
+authorized, or one the token can't read, is skipped entirely (no commits, no languages), and the
+log only says **how many** were skipped, never which.
+
+**On the card.** Private work only shows up in the footer total, `N private`, which adds the
+anonymous ones (with `private-contributions`) and full-mode commits, issues, opened PRs and
+reviews. The other footer numbers (commits, merged PRs, reviews) are still the public ones. The
+job summary gets a "Private" column, with totals only.
 
 ## Level
 
@@ -169,12 +260,15 @@ With a 0.4 curve the attribute grows fast at the start and slowly near the top.
 | --------------------------- | ----------------------- | -------------------------------------------------------------------------------------------- | -------------------: | ---------: |
 | Strength / Força            | STR / FOR               | counted commits (with the daily cap)                                                         |               20,000 |        0.4 |
 | Dexterity / Destreza        | DEX / DES               | counted merged PRs                                                                           |                2,000 |        0.4 |
-| Constitution / Constituição | CON / CON               | days with at least one public commit                                                         |                3,650 |        0.4 |
+| Constitution / Constituição | CON / CON               | days with at least one commit (public or, in full mode, private)                             |                3,650 |        0.4 |
 | Intelligence / Inteligência | INT / INT               | different main languages (the largest language of each repository with 1 KB or more of code) |                   12 | 1 (linear) |
 | Wisdom / Sabedoria          | WIS / SAB               | counted PR reviews                                                                           |                2,000 |        0.4 |
 | Charisma / Carisma          | CHA / CAR               | counted issues + 2 × PRs merged in other people's repositories                               |                2,000 |        0.4 |
 
 Examples with a 0.4 curve and a 2,000 reference: 10 merged PRs give DEX 12; 100 give 30; 500 give 57.
+
+In full mode, the amounts already include private activity (with the caps on the sum), and INT
+also takes the owned private repositories that were read into account.
 
 ## Avatar and card number
 
@@ -189,5 +283,9 @@ Examples with a 0.4 curve and a 2,000 reference: 10 merged PRs give DEX 12; 100 
 
 The rules are part of the Action version. A change that alters the XP, level or class of existing
 users ships in a new major version (for example, from `v1` to `v2`), with a note explaining why.
-New optional rules that are off by default (like `private-contributions`) don't change anyone's card
-and can ship in a minor version.
+New optional rules that are off by default (like `private-contributions` and `private-token`) don't
+change anyone's card and can ship in a minor version.
+
+The rules code ([`src/game/`](../src/game)) is pure (no I/O, no API calls) and has a documented
+entry point, [`src/game/index.ts`](../src/game/index.ts), so it can be shared with the Codorna
+game.
