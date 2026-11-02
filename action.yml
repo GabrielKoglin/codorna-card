@@ -1,0 +1,52 @@
+name: Guild Card
+description: 'Transforma sua atividade pública no GitHub em um card de RPG em pixel art (nível, XP, classe e atributos) para o README.'
+author: Gabriel Koglin
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  username:
+    description: 'Login do GitHub cuja atividade pública vira o card. O padrão é o dono do repositório.'
+    required: false
+    default: ${{ github.repository_owner }}
+  token:
+    description: 'Token para ler a API GraphQL e comitar o SVG. O GITHUB_TOKEN do workflow basta.'
+    required: false
+    default: ${{ github.token }}
+  output:
+    description: 'Caminho do SVG dentro do repositório. Com theme both, vira <nome>-dark.svg e <nome>-light.svg.'
+    required: false
+    default: guild-card.svg
+  theme:
+    description: 'dark, light ou both (gera os dois arquivos para usar com <picture>).'
+    required: false
+    default: dark
+  lang:
+    description: 'Idioma do card, dos logs e da mensagem de commit: pt-BR ou en.'
+    required: false
+    default: pt-BR
+  commit:
+    description: 'true para comitar o SVG no repositório onde o workflow roda (precisa de permissions contents write).'
+    required: false
+    default: 'true'
+
+outputs:
+  level:
+    description: 'Nível (1 a 99).'
+  xp:
+    description: 'XP total.'
+  class:
+    description: 'Id da classe (ex.: blacksmith, alchemist).'
+  class-name:
+    description: 'Nome da classe no idioma escolhido.'
+  rank:
+    description: 'Id da patente (recruit, apprentice, veteran, master, legend, mythic).'
+  files:
+    description: 'Caminhos dos SVGs gerados, um por linha.'
+  committed:
+    description: 'true se um commit novo foi enviado.'
+
+runs:
+  using: node24
+  main: dist/index.js
