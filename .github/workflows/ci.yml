@@ -43,11 +43,12 @@ jobs:
             exit 1
           fi
 
-      - name: Exemplos estão atualizados?
+      - name: Exemplos e assets estão atualizados?
         run: |
           npm run demo
-          if [ -n "$(git status --porcelain -- examples)" ]; then
-            echo "::error::examples/ está desatualizado. Rode 'npm run demo' e comite o resultado."
-            git status --porcelain -- examples
+          npm run assets
+          if [ -n "$(git status --porcelain -- examples assets)" ]; then
+            echo "::error::examples/ ou assets/ está desatualizado. Rode 'npm run demo' e 'npm run assets' e comite o resultado."
+            git status --porcelain -- examples assets
             exit 1
           fi

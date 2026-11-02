@@ -25,7 +25,8 @@
     "test": "vitest run",
     "test:update": "vitest run --update",
     "demo": "tsx scripts/demo.ts",
-    "all": "npm run lint && npm run typecheck && npm test && npm run build && npm run demo"
+    "assets": "tsx scripts/assets.ts",
+    "all": "npm run lint && npm run typecheck && npm test && npm run build && npm run demo && npm run assets"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
