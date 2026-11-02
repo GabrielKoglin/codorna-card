@@ -14,6 +14,8 @@ export interface Logger {
   warning(message: string): void
   error(message: string): void
   group<T>(title: string, fn: () => Promise<T>): Promise<T>
+  /** Esconde um segredo de todos os logs seguintes do job (como o `setSecret` do toolkit). */
+  mask(secret: string): void
 }
 
 /** Escapa o texto de um comando de workflow (`::warning::` etc.). */
@@ -35,6 +37,10 @@ export function consoleLogger(
       } finally {
         write('::endgroup::')
       }
+    },
+    // O mesmo comando que o `core.setSecret` do @actions/core emite.
+    mask: (secret) => {
+      if (secret) write(`::add-mask::${escapeCommand(secret)}`)
     },
   }
 }

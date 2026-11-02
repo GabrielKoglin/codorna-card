@@ -20,7 +20,14 @@ describe('entradas', () => {
       lang: 'pt-BR',
       commit: true,
       privateContributions: false,
+      privateToken: '',
     })
+  })
+
+  it('lê o private-token sem espaços em volta', () => {
+    expect(readInputs(env({ 'private-token': '  github_pat_xyz \n' })).privateToken).toBe(
+      'github_pat_xyz',
+    )
   })
 
   it('aceita valores válidos com espaços e maiúsculas', () => {

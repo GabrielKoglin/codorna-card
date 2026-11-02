@@ -57,6 +57,11 @@ function consoleLogger(write = (line) => process.stdout.write(line + external_no
                 write('::endgroup::');
             }
         },
+        // O mesmo comando que o `core.setSecret` do @actions/core emite.
+        mask: (secret) => {
+            if (secret)
+                write(`::add-mask::${escapeCommand(secret)}`);
+        },
     };
 }
 /** Lê uma entrada da Action (variável `INPUT_<NOME>`). */
@@ -974,6 +979,8 @@ const PT_BR = {
         source: 'Fonte',
         counted: 'Conta para XP',
         rawLabel: 'Total público',
+        publicLabel: 'Público',
+        privateLabel: 'Privado',
         rows: {
             commits: 'Commits (até 10 por dia)',
             issues: 'Issues (até 150 por ano)',
@@ -982,7 +989,14 @@ const PT_BR = {
             merged: 'PRs mesclados',
             mergedElsewhere: 'Bônus: mesclados em repositórios de outras pessoas',
             privateContributions: 'Contribuições privadas (até 1.000 por ano)',
+            restrictedBeyondToken: 'Contribuições privadas anônimas, fora do alcance do token (até 1.000 por ano)',
         },
+        fullMode: (scanned, skipped) => `Modo completo (private-token, só leitura): ${formatNumber(scanned, 'pt-BR')} ` +
+            `${scanned === 1 ? 'repositório privado lido' : 'repositórios privados lidos'}` +
+            (skipped > 0
+                ? `, ${formatNumber(skipped, 'pt-BR')} ${skipped === 1 ? 'pulado' : 'pulados'} por SSO ou falta de acesso`
+                : '') +
+            '. Os tetos valem para a soma de público e privado, e aqui só entram totais: nenhum nome privado.',
         files: 'Arquivos',
         rules: 'Regras completas',
     },
@@ -1124,6 +1138,8 @@ const EN = {
         source: 'Source',
         counted: 'Counts for XP',
         rawLabel: 'Public total',
+        publicLabel: 'Public',
+        privateLabel: 'Private',
         rows: {
             commits: 'Commits (up to 10 per day)',
             issues: 'Issues (up to 150 per year)',
@@ -1132,7 +1148,14 @@ const EN = {
             merged: 'Merged PRs',
             mergedElsewhere: "Bonus: merged in other people's repositories",
             privateContributions: 'Private contributions (up to 1,000 per year)',
+            restrictedBeyondToken: 'Anonymous private contributions the token cannot see (up to 1,000 per year)',
         },
+        fullMode: (scanned, skipped) => `Full mode (private-token, read-only): ${formatNumber(scanned, 'en')} private ` +
+            `${scanned === 1 ? 'repository' : 'repositories'} read` +
+            (skipped > 0
+                ? `, ${formatNumber(skipped, 'en')} skipped because of SSO or missing access`
+                : '') +
+            '. Caps apply to public and private combined, and only totals show up here: no private names.',
         files: 'Files',
         rules: 'Full rules',
     },
@@ -2315,7 +2338,17 @@ function readInputs(env) {
     if (privateContributions === null) {
         throw new CodornaCardError('input', t.errors.invalidBoolean('private-contributions', privateInput));
     }
-    return { username, token, output, theme: themeInput, lang, commit, privateContributions };
+    const privateToken = getInput(env, 'private-token');
+    return {
+        username,
+        token,
+        output,
+        theme: themeInput,
+        lang,
+        commit,
+        privateContributions,
+        privateToken,
+    };
 }
 
 ;// CONCATENATED MODULE: ./src/render/pixels.ts
@@ -3760,41 +3793,74 @@ const RULES_URL = {
     'pt-BR': `${PROJECT_URL}/blob/main/docs/regras.md`,
     en: `${PROJECT_URL}/blob/main/docs/rules.md`,
 };
-function summaryMarkdown(character, inputs, files) {
+/**
+ * Resumo do job com a conta do XP. No modo completo ganha a coluna "Privado" (só totais) e a
+ * quantidade de repositórios privados lidos e pulados; nenhum nome privado entra aqui.
+ */
+function summaryMarkdown(character, inputs, files, data) {
     const t = strings(inputs.lang);
     const n = (value) => formatNumber(value, inputs.lang);
     const a = character.activity;
     const xp = character.xp;
+    const full = data.private;
     const rows = [
-        [t.summary.rows.commits, a.commits.raw, a.commits.counted, xp.commits],
-        [t.summary.rows.issues, a.issues.raw, a.issues.counted, xp.issues],
-        [t.summary.rows.pullRequests, a.pullRequests.raw, a.pullRequests.counted, xp.pullRequests],
-        [t.summary.rows.reviews, a.reviews.raw, a.reviews.counted, xp.reviews],
-        [t.summary.rows.merged, a.merged.raw, a.merged.counted, xp.merged],
+        [t.summary.rows.commits, a.commits.raw, a.commits.privateRaw, a.commits.counted, xp.commits],
+        [t.summary.rows.issues, a.issues.raw, a.issues.privateRaw, a.issues.counted, xp.issues],
+        [
+            t.summary.rows.pullRequests,
+            a.pullRequests.raw,
+            a.pullRequests.privateRaw,
+            a.pullRequests.counted,
+            xp.pullRequests,
+        ],
+        [t.summary.rows.reviews, a.reviews.raw, a.reviews.privateRaw, a.reviews.counted, xp.reviews],
+        [t.summary.rows.merged, a.merged.raw, a.merged.privateRaw, a.merged.counted, xp.merged],
         [
             t.summary.rows.mergedElsewhere,
             a.mergedElsewhere.raw,
+            a.mergedElsewhere.privateRaw,
             a.mergedElsewhere.counted,
             xp.mergedElsewhere,
         ],
     ];
     if (inputs.privateContributions) {
-        rows.push([
-            t.summary.rows.privateContributions,
-            a.privateContributions.raw,
-            a.privateContributions.counted,
-            xp.privateContributions,
-        ]);
+        rows.push(full
+            ? [
+                t.summary.rows.restrictedBeyondToken,
+                null,
+                a.privateContributions.raw,
+                a.privateContributions.counted,
+                xp.privateContributions,
+            ]
+            : [
+                t.summary.rows.privateContributions,
+                a.privateContributions.raw,
+                0,
+                a.privateContributions.counted,
+                xp.privateContributions,
+            ]);
     }
+    const table = full
+        ? [
+            `| ${t.summary.source} | ${t.summary.publicLabel} | ${t.summary.privateLabel} | ${t.summary.counted} | XP |`,
+            '| --- | ---: | ---: | ---: | ---: |',
+            ...rows.map(([label, raw, privateRaw, counted, points]) => `| ${label} | ${raw === null ? '—' : n(raw)} | ${n(privateRaw)} | ${n(counted)} | ${n(points)} |`),
+            `| **Total** | | | | **${n(xp.total)}** |`,
+            '',
+            t.summary.fullMode(full.scannedRepositories, full.skippedRepositories),
+        ]
+        : [
+            `| ${t.summary.source} | ${t.summary.rawLabel} | ${t.summary.counted} | XP |`,
+            '| --- | ---: | ---: | ---: |',
+            ...rows.map(([label, raw, , counted, points]) => `| ${label} | ${n(raw ?? 0)} | ${n(counted)} | ${n(points)} |`),
+            `| **Total** | | | **${n(xp.total)}** |`,
+        ];
     return [
         `## ${t.summary.title(character.login)}`,
         '',
         `**${t.summary.level} ${character.level.level}** · ${t.classes[character.classId]} · ${t.ranks[character.rank]} · ${n(xp.total)} XP`,
         '',
-        `| ${t.summary.source} | ${t.summary.rawLabel} | ${t.summary.counted} | XP |`,
-        '| --- | ---: | ---: | ---: |',
-        ...rows.map(([label, raw, counted, points]) => `| ${label} | ${n(raw)} | ${n(counted)} | ${n(points)} |`),
-        `| **Total** | | | **${n(xp.total)}** |`,
+        ...table,
         '',
         `${t.summary.files}: ${files.map((file) => `\`${file}\``).join(', ')}`,
         '',
@@ -3808,8 +3874,11 @@ async function run(deps) {
     const logger = deps.logger ?? consoleLogger();
     const inputs = readInputs(env);
     const t = strings(inputs.lang);
-    const client = new GitHubClient({
-        token: inputs.token,
+    // Antes de qualquer log: os tokens nunca aparecem, nem por engano.
+    logger.mask(inputs.token);
+    if (inputs.privateToken)
+        logger.mask(inputs.privateToken);
+    const common = {
         lang: inputs.lang,
         apiUrl: env.GITHUB_API_URL,
         graphqlUrl: env.GITHUB_GRAPHQL_URL,
@@ -3817,9 +3886,16 @@ async function run(deps) {
         sleep: deps.sleep,
         log: (message) => logger.info(message),
         warn: (message) => logger.warning(message),
-    });
+    };
+    const client = new GitHubClient({ token: inputs.token, ...common });
+    // O private-token só lê (nada de mutação nem REST que escreve) e os erros dele nunca levam
+    // texto da API, que pode citar repositórios e organizações privadas.
+    const privateClient = inputs.privateToken
+        ? new GitHubClient({ token: inputs.privateToken, redact: true, readOnly: true, ...common })
+        : undefined;
     const data = await logger.group(`Codorna Card · @${inputs.username}`, () => collectPlayer({
         client,
+        privateClient,
         login: inputs.username,
         lang: inputs.lang,
         now: deps.now,
@@ -3877,7 +3953,7 @@ async function run(deps) {
     setOutput(env, 'rank', character.rank);
     setOutput(env, 'files', files.map((file) => file.path).join('\n'));
     setOutput(env, 'committed', String(committed));
-    appendSummary(env, summaryMarkdown(character, inputs, files.map((file) => file.path)));
+    appendSummary(env, summaryMarkdown(character, inputs, files.map((file) => file.path), data));
     return { character, files, committed, commitSha };
 }
 /** Ponto de entrada: transforma qualquer erro em falha do step, com mensagem clara. */

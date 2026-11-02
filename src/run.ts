@@ -9,7 +9,7 @@ import { CodornaCardError } from './github/errors'
 import { formatNumber, strings } from './i18n'
 import { outputFiles, parseLang, readInputs, type Inputs } from './inputs'
 import { renderCard } from './render/card'
-import type { Lang } from './types'
+import type { Lang, PlayerData } from './types'
 
 export interface RunDependencies {
   env: Env
@@ -34,43 +34,96 @@ const RULES_URL: Record<Lang, string> = {
   en: `${PROJECT_URL}/blob/main/docs/rules.md`,
 }
 
-function summaryMarkdown(character: Character, inputs: Inputs, files: string[]): string {
+/** Uma linha da conta do XP: público, privado (modo completo), quanto conta e o XP. */
+type SummaryRow = [
+  label: string,
+  raw: number | null,
+  privateRaw: number,
+  counted: number,
+  xp: number,
+]
+
+/**
+ * Resumo do job com a conta do XP. No modo completo ganha a coluna "Privado" (só totais) e a
+ * quantidade de repositórios privados lidos e pulados; nenhum nome privado entra aqui.
+ */
+function summaryMarkdown(
+  character: Character,
+  inputs: Inputs,
+  files: string[],
+  data: PlayerData,
+): string {
   const t = strings(inputs.lang)
   const n = (value: number) => formatNumber(value, inputs.lang)
   const a = character.activity
   const xp = character.xp
-  const rows: [string, number, number, number][] = [
-    [t.summary.rows.commits, a.commits.raw, a.commits.counted, xp.commits],
-    [t.summary.rows.issues, a.issues.raw, a.issues.counted, xp.issues],
-    [t.summary.rows.pullRequests, a.pullRequests.raw, a.pullRequests.counted, xp.pullRequests],
-    [t.summary.rows.reviews, a.reviews.raw, a.reviews.counted, xp.reviews],
-    [t.summary.rows.merged, a.merged.raw, a.merged.counted, xp.merged],
+  const full = data.private
+  const rows: SummaryRow[] = [
+    [t.summary.rows.commits, a.commits.raw, a.commits.privateRaw, a.commits.counted, xp.commits],
+    [t.summary.rows.issues, a.issues.raw, a.issues.privateRaw, a.issues.counted, xp.issues],
+    [
+      t.summary.rows.pullRequests,
+      a.pullRequests.raw,
+      a.pullRequests.privateRaw,
+      a.pullRequests.counted,
+      xp.pullRequests,
+    ],
+    [t.summary.rows.reviews, a.reviews.raw, a.reviews.privateRaw, a.reviews.counted, xp.reviews],
+    [t.summary.rows.merged, a.merged.raw, a.merged.privateRaw, a.merged.counted, xp.merged],
     [
       t.summary.rows.mergedElsewhere,
       a.mergedElsewhere.raw,
+      a.mergedElsewhere.privateRaw,
       a.mergedElsewhere.counted,
       xp.mergedElsewhere,
     ],
   ]
   if (inputs.privateContributions) {
-    rows.push([
-      t.summary.rows.privateContributions,
-      a.privateContributions.raw,
-      a.privateContributions.counted,
-      xp.privateContributions,
-    ])
+    rows.push(
+      full
+        ? [
+            t.summary.rows.restrictedBeyondToken,
+            null,
+            a.privateContributions.raw,
+            a.privateContributions.counted,
+            xp.privateContributions,
+          ]
+        : [
+            t.summary.rows.privateContributions,
+            a.privateContributions.raw,
+            0,
+            a.privateContributions.counted,
+            xp.privateContributions,
+          ],
+    )
   }
+  const table = full
+    ? [
+        `| ${t.summary.source} | ${t.summary.publicLabel} | ${t.summary.privateLabel} | ${t.summary.counted} | XP |`,
+        '| --- | ---: | ---: | ---: | ---: |',
+        ...rows.map(
+          ([label, raw, privateRaw, counted, points]) =>
+            `| ${label} | ${raw === null ? '—' : n(raw)} | ${n(privateRaw)} | ${n(counted)} | ${n(points)} |`,
+        ),
+        `| **Total** | | | | **${n(xp.total)}** |`,
+        '',
+        t.summary.fullMode(full.scannedRepositories, full.skippedRepositories),
+      ]
+    : [
+        `| ${t.summary.source} | ${t.summary.rawLabel} | ${t.summary.counted} | XP |`,
+        '| --- | ---: | ---: | ---: |',
+        ...rows.map(
+          ([label, raw, , counted, points]) =>
+            `| ${label} | ${n(raw ?? 0)} | ${n(counted)} | ${n(points)} |`,
+        ),
+        `| **Total** | | | **${n(xp.total)}** |`,
+      ]
   return [
     `## ${t.summary.title(character.login)}`,
     '',
     `**${t.summary.level} ${character.level.level}** · ${t.classes[character.classId]} · ${t.ranks[character.rank]} · ${n(xp.total)} XP`,
     '',
-    `| ${t.summary.source} | ${t.summary.rawLabel} | ${t.summary.counted} | XP |`,
-    '| --- | ---: | ---: | ---: |',
-    ...rows.map(
-      ([label, raw, counted, points]) => `| ${label} | ${n(raw)} | ${n(counted)} | ${n(points)} |`,
-    ),
-    `| **Total** | | | **${n(xp.total)}** |`,
+    ...table,
     '',
     `${t.summary.files}: ${files.map((file) => `\`${file}\``).join(', ')}`,
     '',
@@ -85,21 +138,30 @@ export async function run(deps: RunDependencies): Promise<RunResult> {
   const logger = deps.logger ?? consoleLogger()
   const inputs = readInputs(env)
   const t = strings(inputs.lang)
+  // Antes de qualquer log: os tokens nunca aparecem, nem por engano.
+  logger.mask(inputs.token)
+  if (inputs.privateToken) logger.mask(inputs.privateToken)
 
-  const client = new GitHubClient({
-    token: inputs.token,
+  const common = {
     lang: inputs.lang,
     apiUrl: env.GITHUB_API_URL,
     graphqlUrl: env.GITHUB_GRAPHQL_URL,
     fetch: deps.fetch,
     sleep: deps.sleep,
-    log: (message) => logger.info(message),
-    warn: (message) => logger.warning(message),
-  })
+    log: (message: string) => logger.info(message),
+    warn: (message: string) => logger.warning(message),
+  }
+  const client = new GitHubClient({ token: inputs.token, ...common })
+  // O private-token só lê (nada de mutação nem REST que escreve) e os erros dele nunca levam
+  // texto da API, que pode citar repositórios e organizações privadas.
+  const privateClient = inputs.privateToken
+    ? new GitHubClient({ token: inputs.privateToken, redact: true, readOnly: true, ...common })
+    : undefined
 
   const data = await logger.group(`Codorna Card · @${inputs.username}`, () =>
     collectPlayer({
       client,
+      privateClient,
       login: inputs.username,
       lang: inputs.lang,
       now: deps.now,
@@ -170,6 +232,7 @@ export async function run(deps: RunDependencies): Promise<RunResult> {
       character,
       inputs,
       files.map((file) => file.path),
+      data,
     ),
   )
 

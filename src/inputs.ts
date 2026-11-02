@@ -15,6 +15,11 @@ export interface Inputs {
   commit: boolean
   /** Soma ao XP o número de contribuições privadas que o GitHub mostra no perfil. */
   privateContributions: boolean
+  /**
+   * Modo completo: token pessoal só de leitura para contar os repositórios privados. Vazio
+   * quando não foi informado. Nunca é usado para escrever (o commit usa `token`).
+   */
+  privateToken: string
 }
 
 const LOGIN_PATTERN = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i
@@ -101,5 +106,16 @@ export function readInputs(env: Env): Inputs {
     )
   }
 
-  return { username, token, output, theme: themeInput, lang, commit, privateContributions }
+  const privateToken = getInput(env, 'private-token')
+
+  return {
+    username,
+    token,
+    output,
+    theme: themeInput,
+    lang,
+    commit,
+    privateContributions,
+    privateToken,
+  }
 }

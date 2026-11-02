@@ -148,6 +148,8 @@ export interface Strings {
     source: string
     counted: string
     rawLabel: string
+    publicLabel: string
+    privateLabel: string
     rows: {
       commits: string
       issues: string
@@ -156,7 +158,9 @@ export interface Strings {
       merged: string
       mergedElsewhere: string
       privateContributions: string
+      restrictedBeyondToken: string
     }
+    fullMode: (scanned: number, skipped: number) => string
     files: string
     rules: string
   }
@@ -330,6 +334,8 @@ const PT_BR: Strings = {
     source: 'Fonte',
     counted: 'Conta para XP',
     rawLabel: 'Total público',
+    publicLabel: 'Público',
+    privateLabel: 'Privado',
     rows: {
       commits: 'Commits (até 10 por dia)',
       issues: 'Issues (até 150 por ano)',
@@ -338,7 +344,16 @@ const PT_BR: Strings = {
       merged: 'PRs mesclados',
       mergedElsewhere: 'Bônus: mesclados em repositórios de outras pessoas',
       privateContributions: 'Contribuições privadas (até 1.000 por ano)',
+      restrictedBeyondToken:
+        'Contribuições privadas anônimas, fora do alcance do token (até 1.000 por ano)',
     },
+    fullMode: (scanned, skipped) =>
+      `Modo completo (private-token, só leitura): ${formatNumber(scanned, 'pt-BR')} ` +
+      `${scanned === 1 ? 'repositório privado lido' : 'repositórios privados lidos'}` +
+      (skipped > 0
+        ? `, ${formatNumber(skipped, 'pt-BR')} ${skipped === 1 ? 'pulado' : 'pulados'} por SSO ou falta de acesso`
+        : '') +
+      '. Os tetos valem para a soma de público e privado, e aqui só entram totais: nenhum nome privado.',
     files: 'Arquivos',
     rules: 'Regras completas',
   },
@@ -511,6 +526,8 @@ const EN: Strings = {
     source: 'Source',
     counted: 'Counts for XP',
     rawLabel: 'Public total',
+    publicLabel: 'Public',
+    privateLabel: 'Private',
     rows: {
       commits: 'Commits (up to 10 per day)',
       issues: 'Issues (up to 150 per year)',
@@ -519,7 +536,16 @@ const EN: Strings = {
       merged: 'Merged PRs',
       mergedElsewhere: "Bonus: merged in other people's repositories",
       privateContributions: 'Private contributions (up to 1,000 per year)',
+      restrictedBeyondToken:
+        'Anonymous private contributions the token cannot see (up to 1,000 per year)',
     },
+    fullMode: (scanned, skipped) =>
+      `Full mode (private-token, read-only): ${formatNumber(scanned, 'en')} private ` +
+      `${scanned === 1 ? 'repository' : 'repositories'} read` +
+      (skipped > 0
+        ? `, ${formatNumber(skipped, 'en')} skipped because of SSO or missing access`
+        : '') +
+      '. Caps apply to public and private combined, and only totals show up here: no private names.',
     files: 'Files',
     rules: 'Full rules',
   },

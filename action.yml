@@ -34,6 +34,10 @@ inputs:
     description: 'true para somar ao XP o número de contribuições privadas que o GitHub mostra no seu perfil (ligue "Private contributions" em Contribution settings). Só o total entra; nada de repositório privado é lido.'
     required: false
     default: 'false'
+  private-token:
+    description: 'Opcional, modo completo. Token pessoal só de leitura guardado como segredo (ex.: secrets.CODORNA_TOKEN). Conta commits, PRs, issues e reviews dos seus repositórios privados com as mesmas regras e tetos do público. Só lê: o commit do SVG continua com a entrada token. Nenhum nome privado aparece no card, nos logs ou no resumo, só totais.'
+    required: false
+    default: ''
 
 outputs:
   level:
