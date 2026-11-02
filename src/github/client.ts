@@ -1,0 +1,257 @@
+import { strings } from '../i18n'
+import type { Lang } from '../types'
+import { GuildCardError } from './errors'
+
+export interface ClientOptions {
+  token: string
+  lang: Lang
+  /** Padrão: https://api.github.com (no GHES, use GITHUB_API_URL). */
+  apiUrl?: string
+  /** Padrão: `${apiUrl}/graphql` (no GHES, use GITHUB_GRAPHQL_URL). */
+  graphqlUrl?: string
+  fetch?: typeof fetch
+  sleep?: (ms: number) => Promise<void>
+  log?: (message: string) => void
+  warn?: (message: string) => void
+  /** Novas tentativas para falhas temporárias (rede, 5xx, limite secundário). */
+  maxRetries?: number
+  timeoutMs?: number
+}
+
+export interface RateLimitInfo {
+  remaining: number
+  resetAt: Date
+}
+
+interface RawResponse {
+  status: number
+  headers: Headers
+  body: string
+}
+
+interface GraphQLError {
+  type?: string
+  message?: string
+  path?: (string | number)[]
+}
+
+/** Mínimo de pontos de API antes de avisar nos logs. */
+const LOW_RATE_LIMIT = 100
+/** Espera máxima aceita num `retry-after` antes de desistir (segundos). */
+const MAX_RETRY_AFTER = 120
+
+const RETRYABLE_STATUS = new Set([500, 502, 503, 504])
+
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function messageFrom(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { message?: unknown }
+    if (typeof parsed.message === 'string' && parsed.message) return parsed.message
+  } catch {
+    // corpo não é JSON
+  }
+  return body.trim().slice(0, 200) || 'sem detalhes'
+}
+
+function resetFrom(headers: Headers): Date | null {
+  const reset = Number(headers.get('x-ratelimit-reset'))
+  return Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : null
+}
+
+/** Cliente mínimo da API do GitHub (GraphQL e REST) com novas tentativas e erros claros. */
+export class GitHubClient {
+  readonly lang: Lang
+  rateLimit: RateLimitInfo | null = null
+  private readonly token: string
+  private readonly apiUrl: string
+  private readonly graphqlUrl: string
+  private readonly fetchImpl: typeof fetch
+  private readonly sleep: (ms: number) => Promise<void>
+  private readonly log: (message: string) => void
+  private readonly warn: (message: string) => void
+  private readonly maxRetries: number
+  private readonly timeoutMs: number
+  private warnedLowLimit = false
+
+  constructor(options: ClientOptions) {
+    const t = strings(options.lang)
+    if (!options.token) throw new GuildCardError('input', t.errors.missingToken)
+    this.token = options.token
+    this.lang = options.lang
+    this.apiUrl = (options.apiUrl || 'https://api.github.com').replace(/\/+$/, '')
+    this.graphqlUrl = options.graphqlUrl || `${this.apiUrl}/graphql`
+    this.fetchImpl = options.fetch ?? fetch
+    this.sleep = options.sleep ?? defaultSleep
+    this.log = options.log ?? (() => {})
+    this.warn = options.warn ?? this.log
+    this.maxRetries = options.maxRetries ?? 3
+    this.timeoutMs = options.timeoutMs ?? 30_000
+  }
+
+  private get t() {
+    return strings(this.lang)
+  }
+
+  private async wait(attempt: number, seconds?: number): Promise<void> {
+    const delay = seconds ?? 2 ** (attempt - 1)
+    this.log(this.t.log.retrying(attempt + 1, delay))
+    await this.sleep(delay * 1000)
+  }
+
+  /** Faz a requisição, repetindo falhas temporárias. Erros de limite viram GuildCardError. */
+  private async request(url: string, init: RequestInit): Promise<RawResponse> {
+    for (let attempt = 1; ; attempt++) {
+      let response: Response
+      let body: string
+      try {
+        response = await this.fetchImpl(url, {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            'User-Agent': 'guild-card-action',
+            ...(init.headers as Record<string, string> | undefined),
+          },
+          signal: AbortSignal.timeout(this.timeoutMs),
+        })
+        body = await response.text()
+      } catch (error) {
+        if (attempt <= this.maxRetries) {
+          await this.wait(attempt)
+          continue
+        }
+        const name = error instanceof Error ? error.name : ''
+        if (name === 'TimeoutError' || name === 'AbortError') {
+          throw new GuildCardError('timeout', this.t.errors.timeout)
+        }
+        const detail = error instanceof Error ? error.message : String(error)
+        throw new GuildCardError('network', this.t.errors.network(detail))
+      }
+
+      if (RETRYABLE_STATUS.has(response.status) && attempt <= this.maxRetries) {
+        await this.wait(attempt)
+        continue
+      }
+
+      if (response.status === 401) throw new GuildCardError('auth', this.t.errors.badCredentials)
+
+      if (response.status === 403 || response.status === 429) {
+        if (response.headers.get('x-ratelimit-remaining') === '0') {
+          throw new GuildCardError(
+            'rate-limit',
+            this.t.errors.rateLimited(resetFrom(response.headers)),
+          )
+        }
+        const retryAfter = Number(response.headers.get('retry-after'))
+        const secondary =
+          /secondary rate limit|abuse/i.test(body) ||
+          (Number.isFinite(retryAfter) && retryAfter > 0)
+        if (secondary) {
+          const seconds = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60
+          if (attempt <= this.maxRetries && seconds <= MAX_RETRY_AFTER) {
+            await this.wait(attempt, seconds)
+            continue
+          }
+          throw new GuildCardError('secondary-rate-limit', this.t.errors.secondaryRateLimit)
+        }
+      }
+
+      return { status: response.status, headers: response.headers, body }
+    }
+  }
+
+  /** Consulta GraphQL. Erros parciais viram exceção (com tipo NOT_FOUND identificado). */
+  async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+    for (let attempt = 1; ; attempt++) {
+      const response = await this.request(this.graphqlUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      })
+      if (response.status === 403) {
+        throw new GuildCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)))
+      }
+      if (response.status >= 400) {
+        throw new GuildCardError(
+          'api',
+          this.t.errors.api(response.status, messageFrom(response.body)),
+        )
+      }
+      let payload: {
+        data?: T & { rateLimit?: { remaining: number; resetAt: string } }
+        errors?: GraphQLError[]
+      }
+      try {
+        payload = JSON.parse(response.body)
+      } catch {
+        throw new GuildCardError(
+          'api',
+          this.t.errors.api(response.status, messageFrom(response.body)),
+        )
+      }
+      const errors = payload.errors ?? []
+      if (errors.length > 0) {
+        if (errors.some((error) => error.type === 'RATE_LIMITED')) {
+          throw new GuildCardError(
+            'rate-limit',
+            this.t.errors.rateLimited(resetFrom(response.headers)),
+          )
+        }
+        const notFound = errors.find((error) => error.type === 'NOT_FOUND')
+        if (notFound) {
+          throw new GuildCardError(
+            'not-found',
+            this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'),
+          )
+        }
+        const detail = errors.map((error) => error.message ?? error.type ?? '?').join('; ')
+        // O GitHub às vezes responde "Something went wrong" quando a consulta demora; vale repetir.
+        const transient = /something went wrong|timeout|timed out/i.test(detail)
+        if (transient && attempt <= this.maxRetries) {
+          await this.wait(attempt)
+          continue
+        }
+        throw new GuildCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail))
+      }
+      if (!payload.data)
+        throw new GuildCardError('graphql', this.t.errors.graphql('resposta sem dados'))
+      this.trackRateLimit(payload.data.rateLimit)
+      return payload.data
+    }
+  }
+
+  private trackRateLimit(info: { remaining: number; resetAt: string } | undefined): void {
+    if (!info) return
+    this.rateLimit = { remaining: info.remaining, resetAt: new Date(info.resetAt) }
+    if (info.remaining < LOW_RATE_LIMIT && !this.warnedLowLimit) {
+      this.warnedLowLimit = true
+      this.warn(this.t.log.rateLimitLow(info.remaining, this.rateLimit.resetAt))
+    }
+  }
+
+  /** Chamada REST. Devolve status e JSON; quem chama decide o que cada status significa. */
+  async rest<T>(
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT',
+    path: string,
+    body?: unknown,
+  ): Promise<{ status: number; data: T | null; message: string }> {
+    const response = await this.request(`${this.apiUrl}${path}`, {
+      method,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+    let data: T | null
+    try {
+      data = response.body ? (JSON.parse(response.body) as T) : null
+    } catch {
+      data = null
+    }
+    return { status: response.status, data, message: messageFrom(response.body) }
+  }
+}

@@ -156,7 +156,7 @@ const EYES: readonly Layer[] = [
 ]
 
 /** Estilos de olho que continuam legíveis em qualquer tom de pele. */
-const HIGH_CONTRAST_EYES = [1, 4]
+export const HIGH_CONTRAST_EYES = [1, 4]
 
 const EXTRAS: readonly Layer[] = [
   // sorriso
@@ -325,8 +325,8 @@ const LOOKS: Record<ClassId, ClassLook> = {
   adventurer: { body: 'tunic', headgear: 'scarf' },
 }
 
-const SKIN = ['#ffe0c7', '#f2c294', '#dca36b', '#b97b4b', '#8d5634', '#603b23'] as const
-const HAIR_COLORS = [
+export const SKIN = ['#ffe0c7', '#f2c294', '#dca36b', '#b97b4b', '#8d5634', '#603b23'] as const
+export const HAIR_COLORS = [
   '#2a1d15',
   '#5b3a1e',
   '#8e5a2b',
@@ -348,7 +348,7 @@ const TRIM_COLORS = [
   '#2b2533',
   '#3fbfb0',
 ] as const
-const EYE_COLOR = '#1b1420'
+export const EYE_COLOR = '#1b1420'
 
 export interface SpriteColors {
   outline: string
