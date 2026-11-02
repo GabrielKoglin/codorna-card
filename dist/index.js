@@ -5,7 +5,7 @@ import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /***/ ((module, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
 
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
-/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(327);
+/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(739);
 
 process.exitCode = await (0,_run__WEBPACK_IMPORTED_MODULE_0__/* .main */ .iW)();
 
@@ -14,7 +14,7 @@ __webpack_async_result__();
 
 /***/ }),
 
-/***/ 327:
+/***/ 739:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -833,6 +833,10 @@ function compactNumber(value, lang) {
 function utcTime(date) {
     return date.toISOString().slice(11, 16);
 }
+/** "1 review", "2 reviews": número formatado com o rótulo no singular ou no plural. */
+function counted(value, lang, one, many) {
+    return `${formatNumber(value, lang)} ${value === 1 ? one : many}`;
+}
 const PT_BR = {
     card: {
         header: 'CODORNA CARD',
@@ -902,6 +906,26 @@ const PT_BR = {
         result: (level, className, xp) => `Nível ${level} · ${className} · ${xp} XP`,
         privateContributions: (total) => `Contribuições privadas informadas pelo GitHub: ${formatNumber(total, 'pt-BR')} (só o número, sem detalhes).`,
         noPrivateContributions: 'private-contributions está ligado, mas o GitHub não informou nenhuma contribuição privada. Para o número aparecer, ligue "Private contributions" em "Contribution settings", no seu perfil do GitHub.',
+        privateStart: 'Modo completo: lendo os repositórios privados com o private-token (só leitura)…',
+        privateRepositories: (scanned, own) => `${formatNumber(scanned, 'pt-BR')} ${scanned === 1 ? 'repositório privado lido' : 'repositórios privados lidos'}; ` +
+            `${own === 1 ? '1 é seu e entra' : `${formatNumber(own, 'pt-BR')} são seus e entram`} nas linguagens.`,
+        privateRepositoriesTruncated: (limit) => `Mais de ${formatNumber(limit, 'pt-BR')} repositórios privados: só os ${formatNumber(limit, 'pt-BR')} com push mais recente foram lidos.`,
+        privateSkipped: (sso, forbidden) => {
+            const total = sso + forbidden;
+            const parts = [
+                sso > 0 ? `${sso} em organização com SAML SSO sem o token autorizado` : '',
+                forbidden > 0 ? `${forbidden} sem acesso pelo token` : '',
+            ].filter(Boolean);
+            return (`${total} ${total === 1 ? 'repositório privado pulado' : 'repositórios privados pulados'} ` +
+                `(${parts.join('; ')}). Por privacidade, os nomes não aparecem.`);
+        },
+        privateNone: 'O private-token não enxerga nenhum repositório privado. Confira em "Repository access" se ele tem acesso aos seus repositórios e se tem as permissões Contents, Pull requests e Issues (só leitura).',
+        privateHistoryTruncated: (repositories, limit) => `${repositories} ${repositories === 1 ? 'repositório privado tem' : 'repositórios privados têm'} mais de ${formatNumber(limit, 'pt-BR')} commits seus: só os ${formatNumber(limit, 'pt-BR')} mais recentes de cada um contam.`,
+        privateTotals: (x) => `Privado (só totais): ${counted(x.commits, 'pt-BR', 'commit', 'commits')}, ` +
+            `${counted(x.pullRequests, 'pt-BR', 'PR aberto', 'PRs abertos')} ` +
+            `(${counted(x.merged, 'pt-BR', 'mesclado', 'mesclados')}), ` +
+            `${counted(x.reviews, 'pt-BR', 'review', 'reviews')} e ${counted(x.issues, 'pt-BR', 'issue', 'issues')}.`,
+        restrictedBeyondToken: (total) => `Contribuições privadas anônimas que nem o private-token enxerga: ${formatNumber(total, 'pt-BR')}.`,
         wrote: (path) => `Card salvo em ${path}`,
         committed: (sha, branch) => `Commit ${sha.slice(0, 7)} enviado para ${branch}.`,
         unchanged: 'O card não mudou; nada para comitar.',
@@ -936,6 +960,10 @@ const PT_BR = {
         hiddenDetail: 'detalhes omitidos para não expor nomes privados',
         readOnlyClient: 'O private-token é só de leitura: o Codorna Card nunca escreve nada com ele (erro interno).',
         noData: 'resposta sem dados',
+        privateTokenRejected: 'O GitHub recusou o private-token (401): ele expirou, foi revogado ou está errado. Gere outro token e atualize o segredo (por exemplo, CODORNA_TOKEN).',
+        privateTokenForbidden: 'O GitHub negou o acesso do private-token (403). Se o token é de uma organização, confira se ela já aprovou o token.',
+        privateTokenOtherAccount: (login) => `O private-token não é da conta @${login}. Use um token pessoal da própria pessoa do card (o GITHUB_TOKEN não serve).`,
+        privateListFailed: 'O private-token não conseguiu listar os repositórios privados. Confira o acesso do token ("Repository access") e as permissões (Metadata, Contents, Pull requests e Issues, só leitura).',
     },
     summary: {
         title: (login) => `Codorna Card de @${login}`,
@@ -1028,6 +1056,26 @@ const EN = {
         result: (level, className, xp) => `Level ${level} · ${className} · ${xp} XP`,
         privateContributions: (total) => `Private contributions reported by GitHub: ${formatNumber(total, 'en')} (just the number, no details).`,
         noPrivateContributions: 'private-contributions is on, but GitHub reported no private contributions. For the number to show up, turn on "Private contributions" in "Contribution settings" on your GitHub profile.',
+        privateStart: 'Full mode: reading private repositories with the private-token (read-only)…',
+        privateRepositories: (scanned, own) => `${formatNumber(scanned, 'en')} private ${scanned === 1 ? 'repository' : 'repositories'} read; ` +
+            `${formatNumber(own, 'en')} of them ${own === 1 ? 'is yours and counts' : 'are yours and count'} for languages.`,
+        privateRepositoriesTruncated: (limit) => `More than ${formatNumber(limit, 'en')} private repositories: only the ${formatNumber(limit, 'en')} most recently pushed were read.`,
+        privateSkipped: (sso, forbidden) => {
+            const total = sso + forbidden;
+            const parts = [
+                sso > 0 ? `${sso} in an organization with SAML SSO where the token is not authorized` : '',
+                forbidden > 0 ? `${forbidden} the token cannot access` : '',
+            ].filter(Boolean);
+            return (`${total} private ${total === 1 ? 'repository' : 'repositories'} skipped ` +
+                `(${parts.join('; ')}). For privacy, names are not shown.`);
+        },
+        privateNone: 'The private-token cannot see any private repository. Check under "Repository access" that it can access your repositories and that it has the Contents, Pull requests and Issues permissions (read-only).',
+        privateHistoryTruncated: (repositories, limit) => `${repositories} private ${repositories === 1 ? 'repository has' : 'repositories have'} more than ${formatNumber(limit, 'en')} commits of yours: only the ${formatNumber(limit, 'en')} most recent of each count.`,
+        privateTotals: (x) => `Private (totals only): ${counted(x.commits, 'en', 'commit', 'commits')}, ` +
+            `${counted(x.pullRequests, 'en', 'opened PR', 'opened PRs')} ` +
+            `(${formatNumber(x.merged, 'en')} merged), ` +
+            `${counted(x.reviews, 'en', 'review', 'reviews')} and ${counted(x.issues, 'en', 'issue', 'issues')}.`,
+        restrictedBeyondToken: (total) => `Anonymous private contributions not even the private-token can see: ${formatNumber(total, 'en')}.`,
         wrote: (path) => `Card saved to ${path}`,
         committed: (sha, branch) => `Commit ${sha.slice(0, 7)} pushed to ${branch}.`,
         unchanged: 'The card did not change; nothing to commit.',
@@ -1062,6 +1110,10 @@ const EN = {
         hiddenDetail: 'details hidden so no private names are exposed',
         readOnlyClient: 'The private-token is read-only: Codorna Card never writes anything with it (internal error).',
         noData: 'response without data',
+        privateTokenRejected: 'GitHub rejected the private-token (401): it expired, was revoked or is wrong. Create a new token and update the secret (for example, CODORNA_TOKEN).',
+        privateTokenForbidden: 'GitHub denied access to the private-token (403). If the token targets an organization, check that the organization has approved it.',
+        privateTokenOtherAccount: (login) => `The private-token does not belong to @${login}. Use a personal token of the card owner (GITHUB_TOKEN does not work).`,
+        privateListFailed: 'The private-token could not list private repositories. Check the token access ("Repository access") and permissions (Metadata, Contents, Pull requests and Issues, read-only).',
     },
     summary: {
         title: (login) => `Codorna Card of @${login}`,
@@ -1344,6 +1396,373 @@ class GitHubClient {
     }
 }
 
+;// CONCATENATED MODULE: ./src/github/private-queries.ts
+/**
+ * Consultas do modo completo (`private-token`). Privacidade por construção: nenhuma delas pede
+ * nome de repositório, de dono, de branch, mensagem de commit, título, corpo ou URL. Só ids
+ * opacos, datas, contagens e nomes de linguagem. O login pedido é o da própria pessoa do token,
+ * para conferir que o token é dela. Um teste lê este arquivo e recusa campos com nomes.
+ */
+const PRIVATE_PROFILE_QUERY = /* GraphQL */ `
+  query CodornaPrivateProfile($merged: String!, $mergedElsewhere: String!) {
+    rateLimit {
+      remaining
+      resetAt
+    }
+    viewer {
+      id
+      login
+    }
+    merged: search(type: ISSUE, query: $merged, first: 1) {
+      issueCount
+    }
+    mergedElsewhere: search(type: ISSUE, query: $mergedElsewhere, first: 1) {
+      issueCount
+    }
+  }
+`;
+/**
+ * Repositórios privados que o token enxerga, de todos os vínculos (próprios, como colaborador e
+ * de organizações), sem forks. Forks e públicos ficam de fora para não contar de novo o que o
+ * fluxo público já conta.
+ */
+const PRIVATE_REPOSITORIES_QUERY = /* GraphQL */ `
+  query CodornaPrivateRepositories($cursor: String) {
+    rateLimit {
+      remaining
+      resetAt
+    }
+    viewer {
+      repositories(
+        first: 100
+        after: $cursor
+        ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+        isFork: false
+        privacy: PRIVATE
+        orderBy: { field: PUSHED_AT, direction: DESC }
+      ) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          isPrivate
+          isFork
+          owner {
+            id
+          }
+          languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
+            edges {
+              size
+              node {
+                name
+                color
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+/** Commits de autoria da pessoa (pelo id) na branch padrão de um repositório, de 100 em 100. */
+const PRIVATE_HISTORY_QUERY = /* GraphQL */ `
+  query CodornaPrivateHistory(
+    $id: ID!
+    $author: ID!
+    $since: GitTimestamp!
+    $until: GitTimestamp!
+    $cursor: String
+  ) {
+    rateLimit {
+      remaining
+      resetAt
+    }
+    node(id: $id) {
+      ... on Repository {
+        defaultBranchRef {
+          target {
+            ... on Commit {
+              history(
+                first: 100
+                after: $cursor
+                author: { id: $author }
+                since: $since
+                until: $until
+              ) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  oid
+                  authoredDate
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+/**
+ * Um ano: issues, PRs abertos e reviews em repositórios privados, por busca com `is:private`, e,
+ * com `$withRestricted`, o `restrictedContributionsCount` visto por este token (só o que nem ele
+ * enxerga).
+ */
+const PRIVATE_YEAR_QUERY = /* GraphQL */ `
+  query CodornaPrivateYear(
+    $login: String!
+    $from: DateTime!
+    $to: DateTime!
+    $withRestricted: Boolean!
+    $issues: String!
+    $pullRequests: String!
+    $reviews: String!
+  ) {
+    rateLimit {
+      remaining
+      resetAt
+    }
+    user(login: $login) @include(if: $withRestricted) {
+      contributionsCollection(from: $from, to: $to) {
+        restrictedContributionsCount
+      }
+    }
+    issues: search(type: ISSUE, query: $issues, first: 1) {
+      issueCount
+    }
+    pullRequests: search(type: ISSUE, query: $pullRequests, first: 1) {
+      issueCount
+    }
+    reviews: search(type: ISSUE, query: $reviews, first: 1) {
+      issueCount
+    }
+  }
+`;
+
+;// CONCATENATED MODULE: ./src/github/private.ts
+/**
+ * Modo completo: conta o trabalho em repositórios privados com o `private-token`, direto nos
+ * repositórios, com as mesmas regras do público.
+ *
+ * Privacidade, regra dura: as consultas não pedem nenhum nome (repositório, dono, branch),
+ * mensagem, título ou URL, e daqui só saem números e nomes de linguagem. Logs e avisos levam só
+ * quantidades. Erros da API chegam sem o texto original (o cliente do token usa `redact`).
+ */
+
+
+
+/** Data e hora no formato das buscas do GitHub (`2026-01-01T00:00:00+00:00`). */
+function searchDate(date) {
+    return `${date.toISOString().slice(0, 19)}+00:00`;
+}
+function count(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+/** Erros parciais que caem dentro de `nodes[index]` da lista de repositórios. */
+function errorsAt(errors, index) {
+    return errors.filter((error) => error.path[0] === 'viewer' &&
+        error.path[1] === 'repositories' &&
+        error.path[2] === 'nodes' &&
+        error.path[3] === index);
+}
+const skipKind = (errors) => errors.some((error) => error.kind === 'sso') ? 'sso' : 'forbidden';
+async function collectPrivate(options) {
+    const t = strings(options.lang);
+    const { client, login } = options;
+    const maxRepositoryPages = options.maxRepositoryPages ?? 10;
+    const maxHistoryPages = options.maxHistoryPages ?? 100;
+    options.log?.(t.log.privateStart);
+    // Erros de autenticação do token viram mensagens que falam do private-token.
+    const guard = async (call) => {
+        try {
+            return await call();
+        }
+        catch (error) {
+            if (error instanceof CodornaCardError && error.code === 'auth') {
+                throw new CodornaCardError('auth', t.errors.privateTokenRejected);
+            }
+            if (error instanceof CodornaCardError && error.code === 'forbidden') {
+                throw new CodornaCardError('forbidden', t.errors.privateTokenForbidden);
+            }
+            throw error;
+        }
+    };
+    // 1. De quem é o token, e os PRs mesclados (a vida toda).
+    const profile = await guard(() => client.graphql(PRIVATE_PROFILE_QUERY, {
+        merged: `is:pr is:merged is:private author:${login}`,
+        mergedElsewhere: `is:pr is:merged is:private author:${login} -user:${login}`,
+    }));
+    const viewer = profile.viewer;
+    if (!viewer || viewer.login.toLowerCase() !== login.toLowerCase()) {
+        throw new CodornaCardError('input', t.errors.privateTokenOtherAccount(login));
+    }
+    // 2. Repositórios privados, sem forks, de 100 em 100.
+    const candidates = [];
+    const skipped = { sso: 0, forbidden: 0 };
+    let cursor = null;
+    let truncated = false;
+    for (let page = 0;; page++) {
+        if (page >= maxRepositoryPages) {
+            truncated = true;
+            break;
+        }
+        const { data, errors } = await guard(() => client.graphqlPartial(PRIVATE_REPOSITORIES_QUERY, {
+            cursor,
+        }));
+        const connection = data.viewer?.repositories;
+        if (!connection)
+            throw new CodornaCardError('forbidden', t.errors.privateListFailed);
+        (connection.nodes ?? []).forEach((node, index) => {
+            const nodeErrors = errorsAt(errors, index);
+            if (nodeErrors.length > 0 || !node) {
+                skipped[skipKind(nodeErrors)] += 1;
+                return;
+            }
+            // Defesa extra: mesmo que a API ignore o filtro, público e fork nunca entram aqui.
+            if (!node.isPrivate || node.isFork)
+                return;
+            candidates.push({
+                id: node.id,
+                own: node.owner?.id === viewer.id,
+                languages: (node.languages?.edges ?? [])
+                    .filter((edge) => edge !== null)
+                    .map((edge) => ({ name: edge.node.name, color: edge.node.color, size: edge.size })),
+            });
+        });
+        if (!connection.pageInfo.hasNextPage)
+            break;
+        cursor = connection.pageInfo.endCursor;
+    }
+    if (truncated)
+        options.warn?.(t.log.privateRepositoriesTruncated(maxRepositoryPages * 100));
+    // 3. Commits de autoria da pessoa na branch padrão, um repositório de cada vez.
+    const days = {};
+    const seen = new Set();
+    const repositories = [];
+    let scanned = 0;
+    let historyTruncated = 0;
+    const since = options.createdAt.toISOString();
+    const until = options.now.toISOString();
+    for (const candidate of candidates) {
+        // O mesmo commit em dois repositórios privados (uma cópia, por exemplo) conta uma vez só.
+        const found = new Map();
+        let failed = null;
+        let after = null;
+        for (let page = 0;; page++) {
+            if (page >= maxHistoryPages) {
+                historyTruncated += 1;
+                break;
+            }
+            const { data, errors } = await guard(() => client.graphqlPartial(PRIVATE_HISTORY_QUERY, {
+                id: candidate.id,
+                author: viewer.id,
+                since,
+                until,
+                cursor: after,
+            }));
+            if (errors.length > 0 || !data.node) {
+                failed = skipKind(errors);
+                break;
+            }
+            const history = data.node.defaultBranchRef?.target?.history;
+            if (!history)
+                break; // repositório vazio
+            for (const commit of history.nodes ?? []) {
+                if (!commit)
+                    continue;
+                const authored = new Date(commit.authoredDate);
+                if (Number.isNaN(authored.getTime()))
+                    continue;
+                if (authored < options.createdAt || authored > options.now)
+                    continue;
+                found.set(commit.oid, authored.toISOString().slice(0, 10));
+            }
+            if (!history.pageInfo.hasNextPage)
+                break;
+            after = history.pageInfo.endCursor;
+        }
+        if (failed) {
+            skipped[failed] += 1;
+            continue;
+        }
+        scanned += 1;
+        for (const [oid, day] of found) {
+            if (seen.has(oid))
+                continue;
+            seen.add(oid);
+            days[day] = (days[day] ?? 0) + 1;
+        }
+        if (candidate.own)
+            repositories.push({ languages: candidate.languages });
+    }
+    // 4. Issues, PRs abertos e reviews por ano (e as anônimas que nem este token vê).
+    const years = new Map();
+    const restricted = new Map();
+    for (const window of options.windows) {
+        const range = `created:${searchDate(window.from)}..${searchDate(window.to)}`;
+        const data = await guard(() => client.graphql(PRIVATE_YEAR_QUERY, {
+            login,
+            from: window.from.toISOString(),
+            to: window.to.toISOString(),
+            withRestricted: options.restricted,
+            issues: `is:issue is:private author:${login} ${range}`,
+            pullRequests: `is:pr is:private author:${login} ${range}`,
+            reviews: `is:pr is:private reviewed-by:${login} -author:${login} ${range}`,
+        }));
+        const prefix = String(window.year);
+        years.set(window.year, {
+            commitsByDay: Object.fromEntries(Object.entries(days)
+                .filter(([day]) => day.startsWith(prefix))
+                .sort(([a], [b]) => a.localeCompare(b))),
+            issues: count(data.issues.issueCount),
+            pullRequests: count(data.pullRequests.issueCount),
+            reviews: count(data.reviews.issueCount),
+        });
+        if (options.restricted) {
+            restricted.set(window.year, count(data.user?.contributionsCollection.restrictedContributionsCount));
+        }
+    }
+    // 5. Só quantidades nos logs.
+    const skippedTotal = skipped.sso + skipped.forbidden;
+    if (scanned === 0 && skippedTotal === 0)
+        options.warn?.(t.log.privateNone);
+    else
+        options.log?.(t.log.privateRepositories(scanned, repositories.length));
+    if (skippedTotal > 0)
+        options.warn?.(t.log.privateSkipped(skipped.sso, skipped.forbidden));
+    if (historyTruncated > 0)
+        options.warn?.(t.log.privateHistoryTruncated(historyTruncated, maxHistoryPages * 100));
+    const sum = (pick) => [...years.values()].reduce((total, year) => total + pick(year), 0);
+    const merged = count(profile.merged.issueCount);
+    options.log?.(t.log.privateTotals({
+        commits: Object.values(days).reduce((total, n) => total + n, 0),
+        pullRequests: sum((year) => year.pullRequests),
+        merged,
+        reviews: sum((year) => year.reviews),
+        issues: sum((year) => year.issues),
+    }));
+    if (options.restricted) {
+        const total = [...restricted.values()].reduce((a, b) => a + b, 0);
+        options.log?.(t.log.restrictedBeyondToken(total));
+    }
+    return {
+        years,
+        restricted,
+        totals: {
+            mergedPullRequests: merged,
+            mergedPullRequestsElsewhere: Math.min(count(profile.mergedElsewhere.issueCount), merged),
+            repositories,
+            scannedRepositories: scanned,
+            skippedRepositories: skippedTotal,
+        },
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/github/queries.ts
 /**
  * Consultas GraphQL. Tudo é filtrado para dados públicos: repositórios com
@@ -1488,6 +1907,7 @@ function quartersQuery(count) {
 
 
 
+
 /** Limite de repositórios por período que a API devolve em cada lista. */
 const MAX_REPOSITORIES = 100;
 /** Janelas de um ano do calendário (UTC), cortadas na criação da conta e em `now`. */
@@ -1574,7 +1994,8 @@ async function collectRepositories(options, login) {
 }
 async function collectYear(options, login, window) {
     const t = strings(options.lang);
-    const withPrivate = options.privateContributions === true;
+    // No modo completo, as anônimas são lidas com o private-token (veja collectPrivate).
+    const withPrivate = options.privateContributions === true && !options.privateClient;
     const data = await options.client.graphql(YEAR_QUERY, {
         login,
         from: window.from.toISOString(),
@@ -1634,7 +2055,10 @@ async function collectYear(options, login, window) {
     }
     return year;
 }
-/** Lê toda a atividade pública de uma pessoa pela API GraphQL. */
+/**
+ * Lê toda a atividade pública de uma pessoa pela API GraphQL e, com `privateClient` (modo
+ * completo), a dos repositórios privados que o token enxerga, só em números.
+ */
 async function collectPlayer(options) {
     const t = strings(options.lang);
     const now = options.now ?? new Date();
@@ -1671,14 +2095,7 @@ async function collectPlayer(options) {
     const years = [];
     for (const window of windows)
         years.push(await collectYear(options, login, window));
-    if (options.privateContributions) {
-        const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0);
-        if (total > 0)
-            options.log?.(t.log.privateContributions(total));
-        else
-            options.warn?.(t.log.noPrivateContributions);
-    }
-    return {
+    const data = {
         login,
         createdAt: owner.createdAt,
         years,
@@ -1686,6 +2103,40 @@ async function collectPlayer(options) {
         mergedPullRequestsElsewhere: profile.mergedElsewhere.issueCount,
         repositories,
     };
+    if (options.privateClient) {
+        const found = await collectPrivate({
+            client: options.privateClient,
+            login,
+            lang: options.lang,
+            createdAt,
+            now,
+            windows,
+            restricted: options.privateContributions === true,
+            log: options.log,
+            warn: options.warn,
+            maxRepositoryPages: options.maxRepositoryPages,
+            maxHistoryPages: options.maxHistoryPages,
+        });
+        for (const year of years) {
+            year.private = found.years.get(year.year) ?? {
+                commitsByDay: {},
+                issues: 0,
+                pullRequests: 0,
+                reviews: 0,
+            };
+            if (options.privateContributions)
+                year.privateContributions = found.restricted.get(year.year) ?? 0;
+        }
+        data.private = found.totals;
+    }
+    else if (options.privateContributions) {
+        const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0);
+        if (total > 0)
+            options.log?.(t.log.privateContributions(total));
+        else
+            options.warn?.(t.log.noPrivateContributions);
+    }
+    return data;
 }
 
 ;// CONCATENATED MODULE: ./src/github/commit.ts

@@ -37,6 +37,11 @@ function utcTime(date: Date): string {
   return date.toISOString().slice(11, 16)
 }
 
+/** "1 review", "2 reviews": número formatado com o rótulo no singular ou no plural. */
+function counted(value: number, lang: Lang, one: string, many: string): string {
+  return `${formatNumber(value, lang)} ${value === 1 ? one : many}`
+}
+
 export interface Strings {
   card: {
     header: string
@@ -82,6 +87,20 @@ export interface Strings {
     result: (level: number, className: string, xp: string) => string
     privateContributions: (total: number) => string
     noPrivateContributions: string
+    privateStart: string
+    privateRepositories: (scanned: number, own: number) => string
+    privateRepositoriesTruncated: (limit: number) => string
+    privateSkipped: (sso: number, forbidden: number) => string
+    privateNone: string
+    privateHistoryTruncated: (repositories: number, limit: number) => string
+    privateTotals: (totals: {
+      commits: number
+      pullRequests: number
+      merged: number
+      reviews: number
+      issues: number
+    }) => string
+    restrictedBeyondToken: (total: number) => string
     wrote: (path: string) => string
     committed: (sha: string, branch: string) => string
     unchanged: string
@@ -115,6 +134,10 @@ export interface Strings {
     hiddenDetail: string
     readOnlyClient: string
     noData: string
+    privateTokenRejected: string
+    privateTokenForbidden: string
+    privateTokenOtherAccount: (login: string) => string
+    privateListFailed: string
   }
   summary: {
     title: (login: string) => string
@@ -216,6 +239,34 @@ const PT_BR: Strings = {
       `Contribuições privadas informadas pelo GitHub: ${formatNumber(total, 'pt-BR')} (só o número, sem detalhes).`,
     noPrivateContributions:
       'private-contributions está ligado, mas o GitHub não informou nenhuma contribuição privada. Para o número aparecer, ligue "Private contributions" em "Contribution settings", no seu perfil do GitHub.',
+    privateStart: 'Modo completo: lendo os repositórios privados com o private-token (só leitura)…',
+    privateRepositories: (scanned, own) =>
+      `${formatNumber(scanned, 'pt-BR')} ${scanned === 1 ? 'repositório privado lido' : 'repositórios privados lidos'}; ` +
+      `${own === 1 ? '1 é seu e entra' : `${formatNumber(own, 'pt-BR')} são seus e entram`} nas linguagens.`,
+    privateRepositoriesTruncated: (limit) =>
+      `Mais de ${formatNumber(limit, 'pt-BR')} repositórios privados: só os ${formatNumber(limit, 'pt-BR')} com push mais recente foram lidos.`,
+    privateSkipped: (sso, forbidden) => {
+      const total = sso + forbidden
+      const parts = [
+        sso > 0 ? `${sso} em organização com SAML SSO sem o token autorizado` : '',
+        forbidden > 0 ? `${forbidden} sem acesso pelo token` : '',
+      ].filter(Boolean)
+      return (
+        `${total} ${total === 1 ? 'repositório privado pulado' : 'repositórios privados pulados'} ` +
+        `(${parts.join('; ')}). Por privacidade, os nomes não aparecem.`
+      )
+    },
+    privateNone:
+      'O private-token não enxerga nenhum repositório privado. Confira em "Repository access" se ele tem acesso aos seus repositórios e se tem as permissões Contents, Pull requests e Issues (só leitura).',
+    privateHistoryTruncated: (repositories, limit) =>
+      `${repositories} ${repositories === 1 ? 'repositório privado tem' : 'repositórios privados têm'} mais de ${formatNumber(limit, 'pt-BR')} commits seus: só os ${formatNumber(limit, 'pt-BR')} mais recentes de cada um contam.`,
+    privateTotals: (x) =>
+      `Privado (só totais): ${counted(x.commits, 'pt-BR', 'commit', 'commits')}, ` +
+      `${counted(x.pullRequests, 'pt-BR', 'PR aberto', 'PRs abertos')} ` +
+      `(${counted(x.merged, 'pt-BR', 'mesclado', 'mesclados')}), ` +
+      `${counted(x.reviews, 'pt-BR', 'review', 'reviews')} e ${counted(x.issues, 'pt-BR', 'issue', 'issues')}.`,
+    restrictedBeyondToken: (total) =>
+      `Contribuições privadas anônimas que nem o private-token enxerga: ${formatNumber(total, 'pt-BR')}.`,
     wrote: (path) => `Card salvo em ${path}`,
     committed: (sha, branch) => `Commit ${sha.slice(0, 7)} enviado para ${branch}.`,
     unchanged: 'O card não mudou; nada para comitar.',
@@ -261,6 +312,14 @@ const PT_BR: Strings = {
     readOnlyClient:
       'O private-token é só de leitura: o Codorna Card nunca escreve nada com ele (erro interno).',
     noData: 'resposta sem dados',
+    privateTokenRejected:
+      'O GitHub recusou o private-token (401): ele expirou, foi revogado ou está errado. Gere outro token e atualize o segredo (por exemplo, CODORNA_TOKEN).',
+    privateTokenForbidden:
+      'O GitHub negou o acesso do private-token (403). Se o token é de uma organização, confira se ela já aprovou o token.',
+    privateTokenOtherAccount: (login) =>
+      `O private-token não é da conta @${login}. Use um token pessoal da própria pessoa do card (o GITHUB_TOKEN não serve).`,
+    privateListFailed:
+      'O private-token não conseguiu listar os repositórios privados. Confira o acesso do token ("Repository access") e as permissões (Metadata, Contents, Pull requests e Issues, só leitura).',
   },
   summary: {
     title: (login) => `Codorna Card de @${login}`,
@@ -361,6 +420,34 @@ const EN: Strings = {
       `Private contributions reported by GitHub: ${formatNumber(total, 'en')} (just the number, no details).`,
     noPrivateContributions:
       'private-contributions is on, but GitHub reported no private contributions. For the number to show up, turn on "Private contributions" in "Contribution settings" on your GitHub profile.',
+    privateStart: 'Full mode: reading private repositories with the private-token (read-only)…',
+    privateRepositories: (scanned, own) =>
+      `${formatNumber(scanned, 'en')} private ${scanned === 1 ? 'repository' : 'repositories'} read; ` +
+      `${formatNumber(own, 'en')} of them ${own === 1 ? 'is yours and counts' : 'are yours and count'} for languages.`,
+    privateRepositoriesTruncated: (limit) =>
+      `More than ${formatNumber(limit, 'en')} private repositories: only the ${formatNumber(limit, 'en')} most recently pushed were read.`,
+    privateSkipped: (sso, forbidden) => {
+      const total = sso + forbidden
+      const parts = [
+        sso > 0 ? `${sso} in an organization with SAML SSO where the token is not authorized` : '',
+        forbidden > 0 ? `${forbidden} the token cannot access` : '',
+      ].filter(Boolean)
+      return (
+        `${total} private ${total === 1 ? 'repository' : 'repositories'} skipped ` +
+        `(${parts.join('; ')}). For privacy, names are not shown.`
+      )
+    },
+    privateNone:
+      'The private-token cannot see any private repository. Check under "Repository access" that it can access your repositories and that it has the Contents, Pull requests and Issues permissions (read-only).',
+    privateHistoryTruncated: (repositories, limit) =>
+      `${repositories} private ${repositories === 1 ? 'repository has' : 'repositories have'} more than ${formatNumber(limit, 'en')} commits of yours: only the ${formatNumber(limit, 'en')} most recent of each count.`,
+    privateTotals: (x) =>
+      `Private (totals only): ${counted(x.commits, 'en', 'commit', 'commits')}, ` +
+      `${counted(x.pullRequests, 'en', 'opened PR', 'opened PRs')} ` +
+      `(${formatNumber(x.merged, 'en')} merged), ` +
+      `${counted(x.reviews, 'en', 'review', 'reviews')} and ${counted(x.issues, 'en', 'issue', 'issues')}.`,
+    restrictedBeyondToken: (total) =>
+      `Anonymous private contributions not even the private-token can see: ${formatNumber(total, 'en')}.`,
     wrote: (path) => `Card saved to ${path}`,
     committed: (sha, branch) => `Commit ${sha.slice(0, 7)} pushed to ${branch}.`,
     unchanged: 'The card did not change; nothing to commit.',
@@ -406,6 +493,14 @@ const EN: Strings = {
     readOnlyClient:
       'The private-token is read-only: Codorna Card never writes anything with it (internal error).',
     noData: 'response without data',
+    privateTokenRejected:
+      'GitHub rejected the private-token (401): it expired, was revoked or is wrong. Create a new token and update the secret (for example, CODORNA_TOKEN).',
+    privateTokenForbidden:
+      'GitHub denied access to the private-token (403). If the token targets an organization, check that the organization has approved it.',
+    privateTokenOtherAccount: (login) =>
+      `The private-token does not belong to @${login}. Use a personal token of the card owner (GITHUB_TOKEN does not work).`,
+    privateListFailed:
+      'The private-token could not list private repositories. Check the token access ("Repository access") and permissions (Metadata, Contents, Pull requests and Issues, read-only).',
   },
   summary: {
     title: (login) => `Codorna Card of @${login}`,

@@ -2,6 +2,7 @@ import { strings } from '../i18n'
 import type { Lang, PlayerData, RepoLanguages, YearActivity } from '../types'
 import type { GitHubClient } from './client'
 import { CodornaCardError } from './errors'
+import { collectPrivate } from './private'
 import {
   PROFILE_QUERY,
   quartersQuery,
@@ -27,9 +28,17 @@ export interface CollectOptions {
   maxRepositoryPages?: number
   /**
    * Lê também o número de contribuições privadas que o GitHub mostra no perfil
-   * (`restrictedContributionsCount`, ano a ano). Padrão: false.
+   * (`restrictedContributionsCount`, ano a ano). Padrão: false. Com `privateClient`, o número é
+   * lido com ele, para somar só o que nem o token enxerga.
    */
   privateContributions?: boolean
+  /**
+   * Modo completo: cliente do `private-token` (só leitura e com `redact`). Com ele, a atividade
+   * dos repositórios privados que o token enxerga é contada direto nos repositórios.
+   */
+  privateClient?: GitHubClient
+  /** Páginas de 100 commits lidas por repositório privado no máximo (padrão 100). */
+  maxHistoryPages?: number
 }
 
 /** Limite de repositórios por período que a API devolve em cada lista. */
@@ -145,7 +154,8 @@ async function collectYear(
   window: Window & { year: number },
 ): Promise<YearActivity> {
   const t = strings(options.lang)
-  const withPrivate = options.privateContributions === true
+  // No modo completo, as anônimas são lidas com o private-token (veja collectPrivate).
+  const withPrivate = options.privateContributions === true && !options.privateClient
   const data = await options.client.graphql<YearResponse>(YEAR_QUERY, {
     login,
     from: window.from.toISOString(),
@@ -209,7 +219,10 @@ async function collectYear(
   return year
 }
 
-/** Lê toda a atividade pública de uma pessoa pela API GraphQL. */
+/**
+ * Lê toda a atividade pública de uma pessoa pela API GraphQL e, com `privateClient` (modo
+ * completo), a dos repositórios privados que o token enxerga, só em números.
+ */
 export async function collectPlayer(options: CollectOptions): Promise<PlayerData> {
   const t = strings(options.lang)
   const now = options.now ?? new Date()
@@ -246,13 +259,7 @@ export async function collectPlayer(options: CollectOptions): Promise<PlayerData
   const years: YearActivity[] = []
   for (const window of windows) years.push(await collectYear(options, login, window))
 
-  if (options.privateContributions) {
-    const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0)
-    if (total > 0) options.log?.(t.log.privateContributions(total))
-    else options.warn?.(t.log.noPrivateContributions)
-  }
-
-  return {
+  const data: PlayerData = {
     login,
     createdAt: owner.createdAt,
     years,
@@ -260,4 +267,37 @@ export async function collectPlayer(options: CollectOptions): Promise<PlayerData
     mergedPullRequestsElsewhere: profile.mergedElsewhere.issueCount,
     repositories,
   }
+
+  if (options.privateClient) {
+    const found = await collectPrivate({
+      client: options.privateClient,
+      login,
+      lang: options.lang,
+      createdAt,
+      now,
+      windows,
+      restricted: options.privateContributions === true,
+      log: options.log,
+      warn: options.warn,
+      maxRepositoryPages: options.maxRepositoryPages,
+      maxHistoryPages: options.maxHistoryPages,
+    })
+    for (const year of years) {
+      year.private = found.years.get(year.year) ?? {
+        commitsByDay: {},
+        issues: 0,
+        pullRequests: 0,
+        reviews: 0,
+      }
+      if (options.privateContributions)
+        year.privateContributions = found.restricted.get(year.year) ?? 0
+    }
+    data.private = found.totals
+  } else if (options.privateContributions) {
+    const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0)
+    if (total > 0) options.log?.(t.log.privateContributions(total))
+    else options.warn?.(t.log.noPrivateContributions)
+  }
+
+  return data
 }
