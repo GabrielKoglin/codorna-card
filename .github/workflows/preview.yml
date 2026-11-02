@@ -1,0 +1,44 @@
+# Prévia manual com a API de verdade: gera os dois temas sem comitar e
+# deixa os SVGs como artefato do workflow.
+name: Prévia
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: Login do GitHub (vazio = dono do repositório)
+        required: false
+      lang:
+        description: pt-BR ou en
+        required: false
+        default: pt-BR
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: card
+        uses: ./
+        with:
+          username: ${{ inputs.username || github.repository_owner }}
+          lang: ${{ inputs.lang }}
+          theme: both
+          commit: false
+
+      - name: Resultado
+        env:
+          LEVEL: ${{ steps.card.outputs.level }}
+          CLASS_NAME: ${{ steps.card.outputs.class-name }}
+          XP: ${{ steps.card.outputs.xp }}
+        run: echo "Nível $LEVEL · $CLASS_NAME · $XP XP"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: guild-card
+          path: guild-card-*.svg
