@@ -220,6 +220,7 @@ function privateTotal(activity) {
         activity.pullRequests.privateRaw +
         activity.reviews.privateRaw);
 }
+/** Soma o XP de cada tipo de atividade contada (veja `XP_RULES`). */
 function computeXp(activity) {
     const commits = activity.commits.counted * XP_RULES.commit.xp;
     const issues = activity.issues.counted * XP_RULES.issue.xp;
@@ -244,6 +245,7 @@ function xpForLevel(level) {
     const clamped = Math.min(Math.max(Math.floor(level), 1), MAX_LEVEL);
     return LEVEL_FACTOR * (clamped - 1) ** 2;
 }
+/** Nível (1 a 99) para um XP total. */
 function levelForXp(xp) {
     const total = whole(xp);
     let level = Math.min(MAX_LEVEL, Math.floor(1 + Math.sqrt(total / LEVEL_FACTOR)));
@@ -254,6 +256,7 @@ function levelForXp(xp) {
         level -= 1;
     return level;
 }
+/** Nível, XP de início do nível e do próximo, e o progresso (0 a 1) entre eles. */
 function levelProgress(xp) {
     const total = whole(xp);
     const level = levelForXp(total);
@@ -270,6 +273,7 @@ function levelProgress(xp) {
         progress: (total - levelStart) / (nextLevel - levelStart),
     };
 }
+/** Patente de um nível (veja `RANKS`). */
 function rankForLevel(level) {
     let rank = 'recruit';
     for (const entry of RANKS) {
@@ -575,6 +579,7 @@ for (const def of CLASSES) {
     for (const language of def.languages)
         CLASS_BY_LANGUAGE.set(language.toLowerCase(), def.id);
 }
+/** Definição de uma classe pelo id. */
 function classDef(id) {
     const def = CLASSES.find((entry) => entry.id === id);
     if (!def)
@@ -687,6 +692,7 @@ function attributeSources(activity, repositories) {
         cha: activity.issues.counted + 2 * activity.mergedElsewhere.counted,
     };
 }
+/** Os seis atributos (1 a 99) a partir da atividade contada e das linguagens dos repositórios. */
 function computeAttributes(activity, repositories) {
     const sources = attributeSources(activity, repositories);
     const result = {};
@@ -1788,8 +1794,9 @@ async function collectPrivate(options) {
 
 ;// CONCATENATED MODULE: ./src/github/queries.ts
 /**
- * Consultas GraphQL. Tudo é filtrado para dados públicos: repositórios com
- * `isPrivate` são descartados mesmo que o token consiga enxergá-los.
+ * Consultas GraphQL do fluxo público. Tudo é filtrado para dados públicos: repositórios com
+ * `isPrivate` são descartados mesmo que o token consiga enxergá-los. As consultas do modo
+ * completo (`private-token`) ficam à parte, em `private-queries.ts`.
  */
 const PROFILE_QUERY = /* GraphQL */ `
   query CodornaProfile($login: String!, $merged: String!, $mergedElsewhere: String!) {

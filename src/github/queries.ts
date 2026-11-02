@@ -1,6 +1,7 @@
 /**
- * Consultas GraphQL. Tudo é filtrado para dados públicos: repositórios com
- * `isPrivate` são descartados mesmo que o token consiga enxergá-los.
+ * Consultas GraphQL do fluxo público. Tudo é filtrado para dados públicos: repositórios com
+ * `isPrivate` são descartados mesmo que o token consiga enxergá-los. As consultas do modo
+ * completo (`private-token`) ficam à parte, em `private-queries.ts`.
  */
 
 export const PROFILE_QUERY = /* GraphQL */ `

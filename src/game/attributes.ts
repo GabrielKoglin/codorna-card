@@ -1,8 +1,10 @@
 import type { CountedActivity } from './rules'
 import type { AnonymousRepo } from './types'
 
+/** Os seis atributos: força, destreza, constituição, inteligência, sabedoria e carisma. */
 export type AttributeId = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 
+/** Como cada atributo é calculado e a cor da barra dele no card. */
 export interface AttributeDef {
   id: AttributeId
   /** Quantidade que leva o atributo a 99. */
@@ -26,6 +28,7 @@ export const ATTRIBUTES: readonly AttributeDef[] = [
 /** Tamanho mínimo (bytes de código) para um repositório contar em INT. */
 export const MIN_REPO_BYTES = 1024
 
+/** Valor de cada atributo, de 1 a 99. */
 export type Attributes = Record<AttributeId, number>
 
 /** Converte uma quantidade em atributo de 1 a 99. */
@@ -66,6 +69,7 @@ export function attributeSources(
   }
 }
 
+/** Os seis atributos (1 a 99) a partir da atividade contada e das linguagens dos repositórios. */
 export function computeAttributes(
   activity: CountedActivity,
   repositories: readonly AnonymousRepo[],

@@ -1,5 +1,6 @@
 import type { AnonymousRepo } from './types'
 
+/** Classes, uma por família de linguagens (`adventurer` quando não há linguagem conhecida). */
 export type ClassId =
   | 'blacksmith'
   | 'illusionist'
@@ -14,6 +15,7 @@ export type ClassId =
   | 'seer'
   | 'adventurer'
 
+/** Uma classe: cor de destaque e as linguagens que votam nela. */
 export interface ClassDef {
   id: ClassId
   /** Cor de destaque da classe (emblema, roupa do avatar e barra de XP). */
@@ -318,6 +320,7 @@ for (const def of CLASSES) {
   for (const language of def.languages) CLASS_BY_LANGUAGE.set(language.toLowerCase(), def.id)
 }
 
+/** Definição de uma classe pelo id. */
 export function classDef(id: ClassId): ClassDef {
   const def = CLASSES.find((entry) => entry.id === id)
   if (!def) throw new Error(`Classe desconhecida: ${id}`)
@@ -329,6 +332,7 @@ export function classForLanguage(language: string): ClassId | null {
   return CLASS_BY_LANGUAGE.get(language.trim().toLowerCase()) ?? null
 }
 
+/** Uma linguagem com a fatia de votos que recebeu e a classe dela. */
 export interface LanguageShare {
   name: string
   color: string | null
@@ -368,6 +372,7 @@ export function languageShares(repositories: readonly AnonymousRepo[]): Language
     .sort((a, b) => b.share - a.share || a.name.localeCompare(b.name, 'en'))
 }
 
+/** A classe vencedora, com a fatia de votos e a linguagem mais votada dela. */
 export interface ClassResult {
   classId: ClassId
   /** Fatia dos votos que a classe vencedora somou (0 quando não há linguagens). */

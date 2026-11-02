@@ -52,6 +52,7 @@ export interface Counted extends CappedCount {
   counted: number
 }
 
+/** Commits com o teto diário aplicado, mais os dias com commit (para CON). */
 export interface CommitSummary extends Counted {
   /** Dias com pelo menos um commit (público ou, no modo completo, privado). */
   activeDays: number
@@ -59,6 +60,7 @@ export interface CommitSummary extends Counted {
   cappedDays: number
 }
 
+/** Toda a atividade com os tetos aplicados: a entrada de `computeXp` e dos atributos. */
 export interface CountedActivity {
   commits: CommitSummary
   issues: Counted
@@ -73,6 +75,7 @@ export interface CountedActivity {
   privateContributions: CappedCount
 }
 
+/** XP de cada tipo de atividade e o total. */
 export interface XpBreakdown {
   commits: number
   issues: number
@@ -84,6 +87,7 @@ export interface XpBreakdown {
   total: number
 }
 
+/** Nível e progresso até o próximo. */
 export interface LevelProgress {
   level: number
   /** XP total da pessoa. */
@@ -96,6 +100,7 @@ export interface LevelProgress {
   progress: number
 }
 
+/** Patentes, da mais baixa para a mais alta. */
 export type RankId = 'recruit' | 'apprentice' | 'veteran' | 'master' | 'legend' | 'mythic'
 
 /** Patentes por faixa de nível (a moldura do card muda de material em cada uma). */
@@ -222,6 +227,7 @@ export function privateTotal(activity: CountedActivity): number {
   )
 }
 
+/** Soma o XP de cada tipo de atividade contada (veja `XP_RULES`). */
 export function computeXp(activity: CountedActivity): XpBreakdown {
   const commits = activity.commits.counted * XP_RULES.commit.xp
   const issues = activity.issues.counted * XP_RULES.issue.xp
@@ -250,6 +256,7 @@ export function xpForLevel(level: number): number {
   return LEVEL_FACTOR * (clamped - 1) ** 2
 }
 
+/** Nível (1 a 99) para um XP total. */
 export function levelForXp(xp: number): number {
   const total = whole(xp)
   let level = Math.min(MAX_LEVEL, Math.floor(1 + Math.sqrt(total / LEVEL_FACTOR)))
@@ -259,6 +266,7 @@ export function levelForXp(xp: number): number {
   return level
 }
 
+/** Nível, XP de início do nível e do próximo, e o progresso (0 a 1) entre eles. */
 export function levelProgress(xp: number): LevelProgress {
   const total = whole(xp)
   const level = levelForXp(total)
@@ -276,6 +284,7 @@ export function levelProgress(xp: number): LevelProgress {
   }
 }
 
+/** Patente de um nível (veja `RANKS`). */
 export function rankForLevel(level: number): RankId {
   let rank: RankId = 'recruit'
   for (const entry of RANKS) {
