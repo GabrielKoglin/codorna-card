@@ -1,7 +1,10 @@
 # Regras do jogo
 
+_English version: [`rules.md`](rules.md)._
+
 Este documento é a referência das regras do Codorna Card. O código que aplica cada regra
-está em [`src/game/`](../src/game), e toda mudança de regra precisa atualizar este arquivo.
+está em [`src/game/`](../src/game), e toda mudança de regra precisa atualizar este arquivo e a
+versão em inglês.
 
 Princípios:
 

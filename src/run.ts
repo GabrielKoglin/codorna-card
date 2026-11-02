@@ -9,6 +9,7 @@ import { CodornaCardError } from './github/errors'
 import { formatNumber, strings } from './i18n'
 import { outputFiles, parseLang, readInputs, type Inputs } from './inputs'
 import { renderCard } from './render/card'
+import type { Lang } from './types'
 
 export interface RunDependencies {
   env: Env
@@ -27,7 +28,11 @@ export interface RunResult {
 
 /** Endereço do projeto (usado no resumo do job). */
 export const PROJECT_URL = 'https://github.com/GabrielKoglin/codorna-card'
-const RULES_URL = `${PROJECT_URL}/blob/main/docs/regras.md`
+/** Regras completas no idioma do resumo. */
+const RULES_URL: Record<Lang, string> = {
+  'pt-BR': `${PROJECT_URL}/blob/main/docs/regras.md`,
+  en: `${PROJECT_URL}/blob/main/docs/rules.md`,
+}
 
 function summaryMarkdown(character: Character, inputs: Inputs, files: string[]): string {
   const t = strings(inputs.lang)
@@ -69,7 +74,7 @@ function summaryMarkdown(character: Character, inputs: Inputs, files: string[]):
     '',
     `${t.summary.files}: ${files.map((file) => `\`${file}\``).join(', ')}`,
     '',
-    `${t.summary.rules}: ${RULES_URL}`,
+    `${t.summary.rules}: ${RULES_URL[inputs.lang]}`,
     '',
   ].join('\n')
 }

@@ -1,7 +1,7 @@
 import type { PlayerData } from '../types'
 
 /**
- * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md`.
+ * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
  * Os tetos existem para que volume artificial (farm) não vire nível.
  */
 export const XP_RULES = {

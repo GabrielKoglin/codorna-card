@@ -69,6 +69,7 @@ describe('Action de ponta a ponta (API falsa)', () => {
     expect(outputs).toContain(`xp<<`)
     expect(outputs).toMatch(/committed<<ghadelimiter_[^\n]+\ntrue\n/)
     expect(readFileSync(ws.summary, 'utf8')).toContain('| Commits (up to 10 per day) |')
+    expect(readFileSync(ws.summary, 'utf8')).toContain('/blob/main/docs/rules.md')
     expect(lines.some((l) => l.startsWith('Commit c0ffee1 pushed to main'))).toBe(true)
     expect(fake.calls.some((c) => c.method === 'PATCH')).toBe(true)
   })
@@ -100,6 +101,7 @@ describe('Action de ponta a ponta (API falsa)', () => {
     })
     expect(result.character.xp.privateContributions).toBe(0)
     expect(readFileSync(ws.summary, 'utf8')).not.toContain('privadas')
+    expect(readFileSync(ws.summary, 'utf8')).toContain('/blob/main/docs/regras.md')
   })
 
   it('commit: false só gera o arquivo', async () => {

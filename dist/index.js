@@ -522,7 +522,7 @@ function dominantClass(shares) {
 
 ;// CONCATENATED MODULE: ./src/game/rules.ts
 /**
- * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md`.
+ * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
  * Os tetos existem para que volume artificial (farm) não vire nível.
  */
 const XP_RULES = {
@@ -3146,7 +3146,11 @@ function drawCard(canvas, character, options) {
 
 /** Endereço do projeto (usado no resumo do job). */
 const PROJECT_URL = 'https://github.com/GabrielKoglin/codorna-card';
-const RULES_URL = `${PROJECT_URL}/blob/main/docs/regras.md`;
+/** Regras completas no idioma do resumo. */
+const RULES_URL = {
+    'pt-BR': `${PROJECT_URL}/blob/main/docs/regras.md`,
+    en: `${PROJECT_URL}/blob/main/docs/rules.md`,
+};
 function summaryMarkdown(character, inputs, files) {
     const t = strings(inputs.lang);
     const n = (value) => formatNumber(value, inputs.lang);
@@ -3185,7 +3189,7 @@ function summaryMarkdown(character, inputs, files) {
         '',
         `${t.summary.files}: ${files.map((file) => `\`${file}\``).join(', ')}`,
         '',
-        `${t.summary.rules}: ${RULES_URL}`,
+        `${t.summary.rules}: ${RULES_URL[inputs.lang]}`,
         '',
     ].join('\n');
 }

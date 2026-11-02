@@ -342,7 +342,8 @@ cannot see.
   languages), WIS (reviews) and CHA (issues and collaboration on other people's projects). They
   don't give XP.
 
-Full details and formulas (in Portuguese): [`docs/regras.md`](docs/regras.md).
+Full details and formulas: [`docs/rules.md`](docs/rules.md) (em português:
+[`docs/regras.md`](docs/regras.md)).
 
 ### FAQ
 
