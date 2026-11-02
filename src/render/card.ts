@@ -167,7 +167,7 @@ export function renderCard(character: Character, options: RenderOptions): string
     24,
     2,
   )
-  canvas.text(t.card.header, 42, 22, { fill: theme.text })
+  canvas.text(t.card.header, 42, 22, { fill: rankText })
   canvas.text(`${t.card.since(character.memberSince)} · #${character.guildNumber}`, W - 28, 22, {
     fill: theme.muted,
     align: 'right',
@@ -369,7 +369,7 @@ export function renderCard(character: Character, options: RenderOptions): string
     canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted })
   }
 
-  // Números públicos.
+  // Números públicos (issues ficam no resumo do job e na descrição acessível).
   const counts = {
     commits: character.activity.commits.raw,
     merged: character.activity.merged.raw,
@@ -383,7 +383,6 @@ export function renderCard(character: Character, options: RenderOptions): string
       (short ? t.card.stats.mergedShort : t.card.stats.merged)(counts.merged),
     ],
     [numberText(counts.reviews), t.card.stats.reviews(counts.reviews)],
-    [numberText(counts.issues), t.card.stats.issues(counts.issues)],
   ]
   const statText = (items: [string, string][]) =>
     items.map(([value, label]) => `${value} ${label}`).join(' · ')
@@ -395,6 +394,10 @@ export function renderCard(character: Character, options: RenderOptions): string
     sx += canvas.text(value, sx, 326, { fill: theme.text })
     sx += canvas.text(` ${label}`, sx, 326, { fill: theme.muted })
   })
+  const descStats = statText([
+    ...fullStats,
+    [numberText(counts.issues), t.card.stats.issues(counts.issues)],
+  ])
 
   const attributes = ATTRIBUTES.map(
     (def) => `${t.attributes[def.id].short} ${character.attributes[def.id]}`,
@@ -411,7 +414,7 @@ export function renderCard(character: Character, options: RenderOptions): string
     xp: numberText(character.xp.total),
     attributes,
     languages,
-    stats: statText(fullStats),
+    stats: descStats,
   })
   return canvas.toString(t.a11y.title(character.login), desc)
 }

@@ -27,7 +27,7 @@
 <path fill="#07090d" d="M30 24h2v2h-2zM28 26h2v2h-2zM32 26h2v2h-2zM26 28h2v2h-2zM34 28h2v2h-2zM28 30h2v2h-2zM32 30h2v2h-2zM30 32h2v2h-2z"/>
 <path fill="#d9a521" d="M30 26h2v2h-2zM28 28h2v2h-2zM32 28h2v2h-2zM30 30h2v2h-2z"/>
 <path fill="#fff1b8" d="M30 28h2v2h-2z"/>
-<g fill="#f3ecda" transform="translate(42 22) scale(2)"><use href="#g47"/><use href="#g55" x="6"/><use href="#g49" x="12"/><use href="#g4c" x="16"/><use href="#g44" x="22"/><use href="#g43" x="32"/><use href="#g41" x="38"/><use href="#g52" x="44"/><use href="#g44" x="50"/></g>
+<g fill="#f7d66b" transform="translate(42 22) scale(2)"><use href="#g47"/><use href="#g55" x="6"/><use href="#g49" x="12"/><use href="#g4c" x="16"/><use href="#g44" x="22"/><use href="#g43" x="32"/><use href="#g41" x="38"/><use href="#g52" x="44"/><use href="#g44" x="50"/></g>
 <g fill="#a9b1c2" transform="translate(366 22) scale(2)"><use href="#g73"/><use href="#g69" x="6"/><use href="#g6e" x="10"/><use href="#g63" x="16"/><use href="#g65" x="22"/><use href="#g32" x="32"/><use href="#g30" x="38"/><use href="#g31" x="44"/><use href="#g33" x="50"/><use href="#gb7" x="60"/><use href="#g23" x="66"/><use href="#g43" x="72"/><use href="#g42" x="78"/><use href="#g41" x="84"/><use href="#g31" x="90"/><use href="#g2d" x="96"/><use href="#g32" x="100"/><use href="#g34" x="106"/><use href="#g35" x="112"/><use href="#g45" x="118"/></g>
 <rect x="28" y="60" width="120" height="120" fill="#07090d"/>
 <rect x="30" y="62" width="116" height="116" fill="#2d3647"/>
@@ -36,10 +36,10 @@
 <rect x="46" y="169" width="84" height="5" fill="#0e1219"/>
 <path fill="#07090d" d="M67 71h42v7h-42zM60 78h7v7h-7zM109 78h7v7h-7zM53 85h7v7h-7zM116 85h7v7h-7zM46 92h7v7h-7zM123 92h7v7h-7zM39 99h7v42h-7zM130 99h7v42h-7zM46 141h7v14h-7zM123 141h7v14h-7zM53 155h7v7h-7zM116 155h7v7h-7zM60 162h7v7h-7zM81 162h14v7h-14zM109 162h7v7h-7zM67 169h14v7h-14zM95 169h14v7h-14z"/>
 <path fill="#2f8f5b" d="M67 78h35v7h-35zM46 99h14v35h-14zM116 113h7v28h-7zM74 120h21v7h-21zM60 127h7v7h-7zM109 127h7v7h-7zM53 134h7v7h-7z"/>
-<path fill="#226742" d="M102 78h7v14h-7zM60 85h42v7h-42zM109 85h7v7h-7zM60 99h7v7h-7zM109 99h7v7h-7zM123 99h7v7h-7zM123 113h7v28h-7zM95 120h7v14h-7zM67 127h28v7h-28zM102 127h7v7h-7zM46 134h7v7h-7zM60 134h7v7h-7zM109 134h7v7h-7zM53 141h7v7h-7zM116 141h7v7h-7z"/>
+<path fill="#226742" d="M102 78h7v14h-7zM60 85h42v7h-42zM109 85h7v7h-7zM60 99h7v7h-7zM109 99h7v7h-7zM123 99h7v7h-7zM123 113h7v28h-7zM95 120h7v14h-7zM74 127h21v7h-21zM46 134h7v7h-7zM60 134h7v7h-7zM109 134h7v7h-7zM53 141h7v7h-7zM116 141h7v7h-7z"/>
 <path fill="#3f66ba" d="M53 92h70v7h-70zM116 99h7v14h-7zM123 106h7v7h-7z"/>
-<path fill="#603b23" d="M67 99h35v7h-35zM60 106h7v21h-7zM81 106h7v14h-7zM67 120h7v7h-7zM102 120h7v7h-7zM53 148h7v7h-7z"/>
-<path fill="#53331e" d="M102 99h7v7h-7zM88 106h7v14h-7zM109 106h7v21h-7zM116 148h7v7h-7z"/>
+<path fill="#603b23" d="M67 99h35v7h-35zM60 106h7v21h-7zM81 106h7v14h-7zM67 120h7v14h-7zM102 120h7v7h-7zM53 148h7v7h-7z"/>
+<path fill="#53331e" d="M102 99h7v7h-7zM88 106h7v14h-7zM109 106h7v21h-7zM102 127h7v7h-7zM116 148h7v7h-7z"/>
 <path fill="#1b1420" d="M67 106h7v14h-7zM102 106h7v14h-7zM74 113h7v7h-7zM95 113h7v7h-7z"/>
 <path fill="#ffffff" d="M74 106h7v7h-7zM95 106h7v7h-7z"/>
 <path fill="#b55a2e" d="M67 134h7v7h-7zM81 134h14v7h-14zM102 134h7v7h-7zM109 141h7v21h-7zM60 155h7v7h-7z"/>
@@ -68,7 +68,7 @@
 <path fill="#171b25" d="M214 132h2v14h-2zM258 132h2v14h-2zM302 132h2v14h-2zM346 132h2v14h-2zM390 132h2v14h-2zM434 132h2v14h-2zM478 132h2v14h-2zM522 132h2v14h-2zM566 132h2v14h-2z"/>
 <g fill="#a9b1c2" transform="translate(168 156) scale(2)"><use href="#g58"/><use href="#g50" x="6"/></g>
 <g fill="#f3ecda" transform="translate(198 156) scale(2)"><use href="#g37"/><use href="#g39" x="6"/><use href="#g2c" x="12"/><use href="#g37" x="15"/><use href="#g33" x="21"/><use href="#g38" x="27"/><use href="#g2f" x="37"/><use href="#g38" x="47"/><use href="#g30" x="53"/><use href="#g2c" x="59"/><use href="#g30" x="62"/><use href="#g30" x="68"/><use href="#g30" x="74"/></g>
-<g fill="#a9b1c2" transform="translate(516 156) scale(2)"><use href="#g32"/><use href="#g36" x="6"/><use href="#g32" x="12"/><use href="#g74" x="22"/><use href="#g6f" x="27"/><use href="#g67" x="37"/><use href="#g6f" x="43"/></g>
+<g fill="#a9b1c2" transform="translate(484 156) scale(2)"><use href="#g32"/><use href="#g36" x="6"/><use href="#g32" x="12"/><use href="#g58" x="22"/><use href="#g50" x="28"/><use href="#g74" x="38"/><use href="#g6f" x="43"/><use href="#g67" x="53"/><use href="#g6f" x="59"/></g>
 <g fill="#f3ecda" transform="translate(168 186) scale(2)"><use href="#g53"/><use href="#g54" x="6"/><use href="#g52" x="12"/></g>
 <rect x="210" y="184" width="142" height="18" fill="#07090d"/>
 <path fill="#2a3242" d="M338 186h12v14h-12z"/>
@@ -131,11 +131,8 @@
 <g fill="#a9b1c2" transform="translate(92 326) scale(2)"><use href="#g63" x="4"/><use href="#g6f" x="10"/><use href="#g6d" x="16"/><use href="#g6d" x="22"/><use href="#g69" x="28"/><use href="#g74" x="32"/><use href="#g73" x="37"/></g>
 <g fill="#a9b1c2" transform="translate(176 326) scale(2)"><use href="#gb7" x="4"/></g>
 <g fill="#f3ecda" transform="translate(194 326) scale(2)"><use href="#g31"/><use href="#g2c" x="6"/><use href="#g36" x="9"/><use href="#g31" x="15"/><use href="#g32" x="21"/></g>
-<g fill="#a9b1c2" transform="translate(246 326) scale(2)"><use href="#g50" x="4"/><use href="#g52" x="10"/><use href="#g73" x="16"/></g>
-<g fill="#a9b1c2" transform="translate(288 326) scale(2)"><use href="#gb7" x="4"/></g>
-<g fill="#f3ecda" transform="translate(306 326) scale(2)"><use href="#g32"/><use href="#g2c" x="6"/><use href="#g34" x="9"/><use href="#g39" x="15"/><use href="#g34" x="21"/></g>
-<g fill="#a9b1c2" transform="translate(358 326) scale(2)"><use href="#g72" x="4"/><use href="#g65" x="9"/><use href="#g76" x="15"/><use href="#g69" x="21"/><use href="#g65" x="25"/><use href="#g77" x="31"/><use href="#g73" x="37"/></g>
-<g fill="#a9b1c2" transform="translate(442 326) scale(2)"><use href="#gb7" x="4"/></g>
-<g fill="#f3ecda" transform="translate(460 326) scale(2)"><use href="#g35"/><use href="#g31" x="6"/><use href="#g32" x="12"/></g>
-<g fill="#a9b1c2" transform="translate(494 326) scale(2)"><use href="#g69" x="4"/><use href="#g73" x="8"/><use href="#g73" x="14"/><use href="#g75" x="20"/><use href="#g65" x="26"/><use href="#g73" x="32"/></g>
+<g fill="#a9b1c2" transform="translate(246 326) scale(2)"><use href="#g6d" x="4"/><use href="#g65" x="10"/><use href="#g72" x="16"/><use href="#g67" x="21"/><use href="#g65" x="27"/><use href="#g64" x="33"/><use href="#g50" x="43"/><use href="#g52" x="49"/><use href="#g73" x="55"/></g>
+<g fill="#a9b1c2" transform="translate(366 326) scale(2)"><use href="#gb7" x="4"/></g>
+<g fill="#f3ecda" transform="translate(384 326) scale(2)"><use href="#g32"/><use href="#g2c" x="6"/><use href="#g34" x="9"/><use href="#g39" x="15"/><use href="#g34" x="21"/></g>
+<g fill="#a9b1c2" transform="translate(436 326) scale(2)"><use href="#g72" x="4"/><use href="#g65" x="9"/><use href="#g76" x="15"/><use href="#g69" x="21"/><use href="#g65" x="25"/><use href="#g77" x="31"/><use href="#g73" x="37"/></g>
 </svg>

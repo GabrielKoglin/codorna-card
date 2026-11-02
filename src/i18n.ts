@@ -121,7 +121,7 @@ const PT_BR: Strings = {
     since: (year) => `desde ${year}`,
     noLanguages: 'nenhuma linguagem pública ainda',
     percent: formatPercent,
-    toNext: (xp) => `faltam ${xp}`,
+    toNext: (xp) => `faltam ${xp} XP`,
     maxLevel: 'nível máximo!',
     stats: {
       commits: (n) => (n === 1 ? 'commit' : 'commits'),
@@ -255,7 +255,7 @@ const EN: Strings = {
     since: (year) => `since ${year}`,
     noLanguages: 'no public languages yet',
     percent: formatPercent,
-    toNext: (xp) => `${xp} to go`,
+    toNext: (xp) => `${xp} XP to go`,
     maxLevel: 'max level!',
     stats: {
       commits: (n) => (n === 1 ? 'commit' : 'commits'),

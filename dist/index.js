@@ -714,7 +714,7 @@ const PT_BR = {
         since: (year) => `desde ${year}`,
         noLanguages: 'nenhuma linguagem pública ainda',
         percent: formatPercent,
-        toNext: (xp) => `faltam ${xp}`,
+        toNext: (xp) => `faltam ${xp} XP`,
         maxLevel: 'nível máximo!',
         stats: {
             commits: (n) => (n === 1 ? 'commit' : 'commits'),
@@ -831,7 +831,7 @@ const EN = {
         since: (year) => `since ${year}`,
         noLanguages: 'no public languages yet',
         percent: formatPercent,
-        toNext: (xp) => `${xp} to go`,
+        toNext: (xp) => `${xp} XP to go`,
         maxLevel: 'max level!',
         stats: {
             commits: (n) => (n === 1 ? 'commit' : 'commits'),
@@ -2259,8 +2259,8 @@ const EXTRAS = [
     ['', '', '', '', '', '', '', '', '.......KK.......'],
     // bochechas
     ['', '', '', '', '', '', '', '', '....R......R....'],
-    // barba
-    ['', '', '', '', '', '', '', '', '...H..HHHH..H...', '....HHHHHHHH....'],
+    // bigode e cavanhaque
+    ['', '', '', '', '', '', '', '', '......HHHH......', '......HHHH......'],
     // nada
     [],
 ];
@@ -2698,7 +2698,7 @@ function renderCard(character, options) {
     canvas.rect(12, 12, W - 24, 34, theme.panel);
     canvas.rect(12, 46, W - 24, 2, theme.panelEdge);
     canvas.bitmap(['..#..', '.#g#.', '#gwg#', '.#g#.', '..#..'], { '#': theme.outline, g: metal.base, w: metal.gem }, 26, 24, 2);
-    canvas.text(t.card.header, 42, 22, { fill: theme.text });
+    canvas.text(t.card.header, 42, 22, { fill: rankText });
     canvas.text(`${t.card.since(character.memberSince)} · #${character.guildNumber}`, W - 28, 22, {
         fill: theme.muted,
         align: 'right',
@@ -2862,7 +2862,7 @@ function renderCard(character, options) {
     else {
         canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted });
     }
-    // Números públicos.
+    // Números públicos (issues ficam no resumo do job e na descrição acessível).
     const counts = {
         commits: character.activity.commits.raw,
         merged: character.activity.merged.raw,
@@ -2876,7 +2876,6 @@ function renderCard(character, options) {
             (short ? t.card.stats.mergedShort : t.card.stats.merged)(counts.merged),
         ],
         [numberText(counts.reviews), t.card.stats.reviews(counts.reviews)],
-        [numberText(counts.issues), t.card.stats.issues(counts.issues)],
     ];
     const statText = (items) => items.map(([value, label]) => `${value} ${label}`).join(' · ');
     const fullStats = statItems(false);
@@ -2888,6 +2887,10 @@ function renderCard(character, options) {
         sx += canvas.text(value, sx, 326, { fill: theme.text });
         sx += canvas.text(` ${label}`, sx, 326, { fill: theme.muted });
     });
+    const descStats = statText([
+        ...fullStats,
+        [numberText(counts.issues), t.card.stats.issues(counts.issues)],
+    ]);
     const attributes = ATTRIBUTES.map((def) => `${t.attributes[def.id].short} ${character.attributes[def.id]}`).join(', ');
     const languages = character.languages
         .slice(0, 3)
@@ -2900,7 +2903,7 @@ function renderCard(character, options) {
         xp: numberText(character.xp.total),
         attributes,
         languages,
-        stats: statText(fullStats),
+        stats: descStats,
     });
     return canvas.toString(t.a11y.title(character.login), desc);
 }
