@@ -4,10 +4,12 @@ import { classDef } from '../game/classes'
 import { seededRandom } from '../hash'
 import { formatNumber, strings } from '../i18n'
 import type { Lang, ThemeName } from '../types'
+import { Canvas } from './canvas'
 import { darken, ensureContrast, lighten, mix } from './color'
-import { characters, glyph, glyphPath, LETTER_SPACING, measure, truncate } from './font'
+import { measure } from './font'
 import { EMBLEMS, EMBLEM_SIZE } from './icons'
-import { parseBitmap, pixelPath } from './pixels'
+import { MASCOT_ICON, mascotPalette } from './mascot'
+import { pixelPath } from './pixels'
 import { buildSprite } from './sprite'
 import { RANK_METALS, THEMES } from './theme'
 
@@ -17,94 +19,6 @@ export const CARD_HEIGHT = 360
 export interface RenderOptions {
   theme: ThemeName
   lang: Lang
-}
-
-type Align = 'left' | 'center' | 'right'
-
-interface TextOptions {
-  scale?: number
-  fill: string
-  align?: Align
-  /** Largura máxima em px; o texto é cortado com reticências. */
-  maxWidth?: number
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-/** Monta o SVG com a fonte em `<defs>` (cada glifo usado entra uma vez só). */
-class Canvas {
-  private readonly glyphs = new Map<string, string>()
-  private readonly parts: string[] = []
-
-  rect(x: number, y: number, w: number, h: number, fill: string): void {
-    if (w <= 0 || h <= 0) return
-    this.parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`)
-  }
-
-  path(d: string, fill: string): void {
-    if (d) this.parts.push(`<path fill="${fill}" d="${d}"/>`)
-  }
-
-  /** Desenha um bitmap de papéis (um caractere por pixel) com uma cor por papel. */
-  bitmap(
-    rows: readonly string[],
-    colors: Record<string, string>,
-    x: number,
-    y: number,
-    scale: number,
-  ): void {
-    for (const [role, fill] of Object.entries(colors)) {
-      this.path(pixelPath(parseBitmap(rows, role), scale, x, y), fill)
-    }
-  }
-
-  /** Escreve texto na fonte de pixel. Devolve a largura em px. */
-  text(content: string, x: number, y: number, options: TextOptions): number {
-    const scale = options.scale ?? 2
-    const value =
-      options.maxWidth !== undefined
-        ? truncate(content, Math.floor(options.maxWidth / scale))
-        : content
-    const width = measure(value) * scale
-    const align = options.align ?? 'left'
-    const left = Math.round(align === 'center' ? x - width / 2 : align === 'right' ? x - width : x)
-    const uses: string[] = []
-    let cursor = 0
-    for (const char of characters(value)) {
-      const g = glyph(char)
-      if (g.pixels.length > 0) {
-        if (!this.glyphs.has(g.id)) this.glyphs.set(g.id, glyphPath(g))
-        uses.push(cursor === 0 ? `<use href="#${g.id}"/>` : `<use href="#${g.id}" x="${cursor}"/>`)
-      }
-      cursor += g.width + LETTER_SPACING
-    }
-    if (uses.length > 0) {
-      this.parts.push(
-        `<g fill="${options.fill}" transform="translate(${left} ${y}) scale(${scale})">${uses.join('')}</g>`,
-      )
-    }
-    return width
-  }
-
-  toString(title: string, desc: string): string {
-    const defs = [...this.glyphs].map(([id, d]) => `<path id="${id}" d="${d}"/>`).join('')
-    return [
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-labelledby="gc-title gc-desc" shape-rendering="crispEdges">`,
-      `<title id="gc-title">${escapeXml(title)}</title>`,
-      `<desc id="gc-desc">${escapeXml(desc)}</desc>`,
-      `<defs>${defs}</defs>`,
-      ...this.parts,
-      '</svg>',
-      '',
-    ].join('\n')
-  }
 }
 
 /** Retângulo com cantos "arredondados" em degraus de pixel. */
@@ -168,7 +82,22 @@ function snap(value: number): number {
   return Math.round(value / 2) * 2
 }
 
+/** Gera o SVG do card (640×360). */
 export function renderCard(character: Character, options: RenderOptions): string {
+  const canvas = new Canvas(CARD_WIDTH, CARD_HEIGHT)
+  const { title, desc } = drawCard(canvas, character, options)
+  return canvas.toString(title, desc)
+}
+
+/**
+ * Desenha o card a partir de (0, 0) num canvas qualquer (a prévia social desenha o card dentro de
+ * uma imagem maior). Devolve o título e a descrição acessível.
+ */
+export function drawCard(
+  canvas: Canvas,
+  character: Character,
+  options: RenderOptions,
+): { title: string; desc: string } {
   const t = strings(options.lang)
   const theme = THEMES[options.theme]
   const metal = RANK_METALS[character.rank]
@@ -180,7 +109,6 @@ export function renderCard(character: Character, options: RenderOptions): string
     4.5,
   )
   const numberText = (value: number) => formatNumber(value, options.lang)
-  const canvas = new Canvas()
   const W = CARD_WIDTH
   const H = CARD_HEIGHT
 
@@ -202,17 +130,11 @@ export function renderCard(character: Character, options: RenderOptions): string
     canvas.bitmap(CORNER_GEM, { '#': theme.outline, g: metal.base, w: metal.gem }, gx, gy, 2)
   }
 
-  // Cabeçalho.
+  // Cabeçalho: a codorna e o nome do projeto.
   canvas.rect(12, 12, W - 24, 34, theme.panel)
   canvas.rect(12, 46, W - 24, 2, theme.panelEdge)
-  canvas.bitmap(
-    ['..#..', '.#g#.', '#gwg#', '.#g#.', '..#..'],
-    { '#': theme.outline, g: metal.base, w: metal.gem },
-    26,
-    24,
-    2,
-  )
-  canvas.text(t.card.header, 42, 22, { fill: rankText })
+  canvas.bitmap(MASCOT_ICON, mascotPalette(theme.outline), 22, 14, 2)
+  canvas.text(t.card.header, 62, 22, { fill: rankText })
   canvas.text(`${t.card.since(character.memberSince)} · #${character.cardNumber}`, W - 28, 22, {
     fill: theme.muted,
     align: 'right',
@@ -450,5 +372,5 @@ export function renderCard(character: Character, options: RenderOptions): string
     languages,
     stats: descStats,
   })
-  return canvas.toString(t.a11y.title(character.login), desc)
+  return { title: t.a11y.title(character.login), desc }
 }

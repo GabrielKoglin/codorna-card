@@ -5,7 +5,7 @@ import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /***/ ((module, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
 
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
-/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(976);
+/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(638);
 
 process.exitCode = await (0,_run__WEBPACK_IMPORTED_MODULE_0__/* .main */ .iW)();
 
@@ -14,7 +14,7 @@ __webpack_async_result__();
 
 /***/ }),
 
-/***/ 976:
+/***/ 638:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -1712,73 +1712,6 @@ function readInputs(env) {
     return { username, token, output, theme: themeInput, lang, commit, privateContributions };
 }
 
-;// CONCATENATED MODULE: ./src/render/color.ts
-/** Utilitários de cor (hex #rrggbb). */
-function clampByte(value) {
-    return Math.min(255, Math.max(0, Math.round(value)));
-}
-function parseHex(hex) {
-    const clean = hex.replace('#', '');
-    const full = clean.length === 3
-        ? clean
-            .split('')
-            .map((c) => c + c)
-            .join('')
-        : clean;
-    if (!/^[0-9a-fA-F]{6}$/.test(full))
-        throw new Error(`cor inválida: ${hex}`);
-    return [
-        parseInt(full.slice(0, 2), 16),
-        parseInt(full.slice(2, 4), 16),
-        parseInt(full.slice(4, 6), 16),
-    ];
-}
-function toHex([r, g, b]) {
-    return `#${[r, g, b].map((v) => clampByte(v).toString(16).padStart(2, '0')).join('')}`;
-}
-/** Mistura duas cores: amount 0 = a, 1 = b. */
-function mix(a, b, amount) {
-    const ca = parseHex(a);
-    const cb = parseHex(b);
-    return toHex([
-        ca[0] + (cb[0] - ca[0]) * amount,
-        ca[1] + (cb[1] - ca[1]) * amount,
-        ca[2] + (cb[2] - ca[2]) * amount,
-    ]);
-}
-const darken = (color, amount) => mix(color, '#000000', amount);
-const lighten = (color, amount) => mix(color, '#ffffff', amount);
-function channel(value) {
-    const v = value / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-}
-/** Luminância relativa (WCAG 2.x). */
-function luminance(color) {
-    const [r, g, b] = parseHex(color);
-    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-/** Razão de contraste (WCAG 2.x), de 1 a 21. */
-function contrast(a, b) {
-    const la = luminance(a);
-    const lb = luminance(b);
-    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
-/**
- * Escurece (ou clareia) a cor até atingir o contraste mínimo com o fundo.
- * Usado para que a cor da classe também sirva como cor de texto nos dois temas.
- */
-function ensureContrast(color, background, minimum) {
-    if (contrast(color, background) >= minimum)
-        return color;
-    const target = luminance(background) > 0.5 ? '#000000' : '#ffffff';
-    for (let step = 1; step <= 20; step++) {
-        const candidate = mix(color, target, step / 20);
-        if (contrast(candidate, background) >= minimum)
-            return candidate;
-    }
-    return target;
-}
-
 ;// CONCATENATED MODULE: ./src/render/pixels.ts
 /**
  * Cobre um conjunto de pixels com poucos retângulos (guloso: estende para a direita
@@ -2030,6 +1963,158 @@ function glyphPath(g) {
     return pixelPath(g.pixels);
 }
 
+;// CONCATENATED MODULE: ./src/render/canvas.ts
+
+
+function escapeXml(value) {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+/**
+ * Monta um SVG de pixel art: retângulos, caminhos, bitmaps de papéis e texto na fonte do
+ * projeto, com cada glifo usado definido uma vez só em `<defs>`. Usado pelo card, pelo logo e
+ * pela prévia social.
+ */
+class Canvas {
+    width;
+    height;
+    glyphs = new Map();
+    parts = [];
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+    }
+    rect(x, y, w, h, fill) {
+        if (w <= 0 || h <= 0)
+            return;
+        this.parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`);
+    }
+    path(d, fill) {
+        if (d)
+            this.parts.push(`<path fill="${fill}" d="${d}"/>`);
+    }
+    /** Desenha um bitmap de papéis (um caractere por pixel) com uma cor por papel. */
+    bitmap(rows, colors, x, y, scale) {
+        for (const [role, fill] of Object.entries(colors)) {
+            this.path(pixelPath(parseBitmap(rows, role), scale, x, y), fill);
+        }
+    }
+    /** Escreve texto na fonte de pixel. Devolve a largura em px. */
+    text(content, x, y, options) {
+        const scale = options.scale ?? 2;
+        const value = options.maxWidth !== undefined
+            ? truncate(content, Math.floor(options.maxWidth / scale))
+            : content;
+        const width = measure(value) * scale;
+        const align = options.align ?? 'left';
+        const left = Math.round(align === 'center' ? x - width / 2 : align === 'right' ? x - width : x);
+        const uses = [];
+        let cursor = 0;
+        for (const char of characters(value)) {
+            const g = glyph(char);
+            if (g.pixels.length > 0) {
+                if (!this.glyphs.has(g.id))
+                    this.glyphs.set(g.id, glyphPath(g));
+                uses.push(cursor === 0 ? `<use href="#${g.id}"/>` : `<use href="#${g.id}" x="${cursor}"/>`);
+            }
+            cursor += g.width + LETTER_SPACING;
+        }
+        if (uses.length > 0) {
+            this.parts.push(`<g fill="${options.fill}" transform="translate(${left} ${y}) scale(${scale})">${uses.join('')}</g>`);
+        }
+        return width;
+    }
+    /** Desenha dentro de um grupo deslocado para (x, y). */
+    group(x, y, draw) {
+        this.parts.push(`<g transform="translate(${x} ${y})">`);
+        draw();
+        this.parts.push('</g>');
+    }
+    toString(title, desc) {
+        const defs = [...this.glyphs].map(([id, d]) => `<path id="${id}" d="${d}"/>`).join('');
+        return [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}" role="img" aria-labelledby="gc-title gc-desc" shape-rendering="crispEdges">`,
+            `<title id="gc-title">${escapeXml(title)}</title>`,
+            `<desc id="gc-desc">${escapeXml(desc)}</desc>`,
+            `<defs>${defs}</defs>`,
+            ...this.parts,
+            '</svg>',
+            '',
+        ].join('\n');
+    }
+}
+
+;// CONCATENATED MODULE: ./src/render/color.ts
+/** Utilitários de cor (hex #rrggbb). */
+function clampByte(value) {
+    return Math.min(255, Math.max(0, Math.round(value)));
+}
+function parseHex(hex) {
+    const clean = hex.replace('#', '');
+    const full = clean.length === 3
+        ? clean
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : clean;
+    if (!/^[0-9a-fA-F]{6}$/.test(full))
+        throw new Error(`cor inválida: ${hex}`);
+    return [
+        parseInt(full.slice(0, 2), 16),
+        parseInt(full.slice(2, 4), 16),
+        parseInt(full.slice(4, 6), 16),
+    ];
+}
+function toHex([r, g, b]) {
+    return `#${[r, g, b].map((v) => clampByte(v).toString(16).padStart(2, '0')).join('')}`;
+}
+/** Mistura duas cores: amount 0 = a, 1 = b. */
+function mix(a, b, amount) {
+    const ca = parseHex(a);
+    const cb = parseHex(b);
+    return toHex([
+        ca[0] + (cb[0] - ca[0]) * amount,
+        ca[1] + (cb[1] - ca[1]) * amount,
+        ca[2] + (cb[2] - ca[2]) * amount,
+    ]);
+}
+const darken = (color, amount) => mix(color, '#000000', amount);
+const lighten = (color, amount) => mix(color, '#ffffff', amount);
+function channel(value) {
+    const v = value / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+/** Luminância relativa (WCAG 2.x). */
+function luminance(color) {
+    const [r, g, b] = parseHex(color);
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+/** Razão de contraste (WCAG 2.x), de 1 a 21. */
+function contrast(a, b) {
+    const la = luminance(a);
+    const lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+/**
+ * Escurece (ou clareia) a cor até atingir o contraste mínimo com o fundo.
+ * Usado para que a cor da classe também sirva como cor de texto nos dois temas.
+ */
+function ensureContrast(color, background, minimum) {
+    if (contrast(color, background) >= minimum)
+        return color;
+    const target = luminance(background) > 0.5 ? '#000000' : '#ffffff';
+    for (let step = 1; step <= 20; step++) {
+        const candidate = mix(color, target, step / 20);
+        if (contrast(candidate, background) >= minimum)
+            return candidate;
+    }
+    return target;
+}
+
 ;// CONCATENATED MODULE: ./src/render/icons.ts
 /**
  * Emblemas 9×9 das classes, desenhados à mão para este projeto.
@@ -2170,6 +2255,99 @@ const EMBLEMS = {
     ],
 };
 const EMBLEM_SIZE = 9;
+
+;// CONCATENATED MODULE: ./src/render/mascot.ts
+/**
+ * A codorna, mascote do Codorna Card: pixel art original, desenhada à mão para este projeto.
+ * É uma codorna de perfil, olhando para a direita, com o topete que curva para a frente,
+ * pintas creme nas costas e papo creme. A versão grande usa um headset (fone com microfone),
+ * o detalhe de dev (e de quem joga).
+ *
+ * Papéis de cor nos desenhos:
+ *   # contorno · b pena · B pena escura (asa e sombra) · l luz · c papo · C sombra do papo
+ *   s pinta · e olho · w brilho do olho · k bico · p topete · P brilho do topete · f pé
+ *   r bochecha · x sobrancelha · h arco e haste do headset · H concha · j brilho da concha
+ */
+/** Ícone 16×15 para o cabeçalho do card (desenhado em escala 2). */
+const MASCOT_ICON = [
+    '...........##...',
+    '..........#pp#..',
+    '.........#p#p#..',
+    '........##p##...',
+    '.......#bbbbb#..',
+    '......#bbbbbbb#.',
+    '......#bbbbbwb#.',
+    '.##.###bbbbbeb#.',
+    '#bb#bbbbbbbccck#',
+    '.#bbbbbbbcccc##.',
+    '#bbbBBBBBcccc#..',
+    '#bbBBsBBBcccc#..',
+    '.#bBBBBsBcccc#..',
+    '..#bbbbbbbcc#...',
+    '...#########....',
+];
+/** Mascote completo, 30×31, com o headset. Para o logo, a prévia social e o README. */
+const MASCOT = (/* unused pure expression or super */ null && ([
+    '......................##......',
+    '.....................#Pp#.....',
+    '.....................#ppp#....',
+    '....................#p#pp#....',
+    '.................####p###.....',
+    '................#llhhbll#.....',
+    '...............#lbhbbbbbl#....',
+    '..............#lbhbbbbbbbl#...',
+    '.............#lbbhbxxxbbbbl#..',
+    '.............#lbHjHbbbbwebb#..',
+    '.............#lbHHHbbbbeebb##.',
+    '.#..........##lbHHHbbbbeebbkk#',
+    '#l#........#llbbbHhbbbbcbbbk#.',
+    '#Bl#...####lbbbbbbbhbccccrr#..',
+    '.#BB#.#llllbbbbbbbbbhhjccC#...',
+    '..#bB#lbbbbbsbbbbbbbccccC#....',
+    '..#BblbBsBBBBBbbbbbbcccC#.....',
+    '...#bbBBBBBBBBBbbbccccC#......',
+    '..#lbBBBBBsBBBsBcccccccC#.....',
+    '..#bBBsBBBBBBBBccccccccC#.....',
+    '.#BbBBBBBBBBBBccccCcccCcC#....',
+    '..#bbBBBsBBBsBcccccccccC#.....',
+    '..#BbbBBBBBBBccccccccccC#.....',
+    '...#bbbBBBBBBBccccccCcC#......',
+    '...#BBbbbbbbbbcccccccCC#......',
+    '....##BbbbbbbbbcccccC##.......',
+    '......#BBBBbbbbbCCCC#.........',
+    '.......####bBBBB####..........',
+    '..........#f####f#............',
+    '.........#fff##fff#...........',
+    '..........###..###............',
+]));
+/** Cores fixas da codorna (o contorno vem do tema). */
+const MASCOT_COLORS = {
+    b: '#a8693a',
+    B: '#7d4a26',
+    l: '#c98c56',
+    c: '#f2dfb4',
+    C: '#d9bd88',
+    s: '#ead2a0',
+    e: '#1b1420',
+    w: '#ffffff',
+    k: '#f0a830',
+    p: '#6b3f1f',
+    P: '#9a6034',
+    f: '#e8905a',
+    r: '#f29a9a',
+    x: '#f6e7c4',
+    h: '#3b3f4c',
+    H: '#8e6ae6',
+    j: '#c7b5ff',
+};
+/** Paleta completa para desenhar a codorna com o contorno escolhido. */
+function mascotPalette(outline) {
+    return { '#': outline, ...MASCOT_COLORS };
+}
+/** Largura e altura de um desenho em papéis. */
+function bitmapSize(rows) {
+    return { width: Math.max(0, ...rows.map((row) => row.length)), height: rows.length };
+}
 
 ;// CONCATENATED MODULE: ./src/render/sprite.ts
 
@@ -2656,73 +2834,10 @@ const RANK_METALS = {
 
 
 
+
+
 const CARD_WIDTH = 640;
 const CARD_HEIGHT = 360;
-function escapeXml(value) {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
-}
-/** Monta o SVG com a fonte em `<defs>` (cada glifo usado entra uma vez só). */
-class Canvas {
-    glyphs = new Map();
-    parts = [];
-    rect(x, y, w, h, fill) {
-        if (w <= 0 || h <= 0)
-            return;
-        this.parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`);
-    }
-    path(d, fill) {
-        if (d)
-            this.parts.push(`<path fill="${fill}" d="${d}"/>`);
-    }
-    /** Desenha um bitmap de papéis (um caractere por pixel) com uma cor por papel. */
-    bitmap(rows, colors, x, y, scale) {
-        for (const [role, fill] of Object.entries(colors)) {
-            this.path(pixelPath(parseBitmap(rows, role), scale, x, y), fill);
-        }
-    }
-    /** Escreve texto na fonte de pixel. Devolve a largura em px. */
-    text(content, x, y, options) {
-        const scale = options.scale ?? 2;
-        const value = options.maxWidth !== undefined
-            ? truncate(content, Math.floor(options.maxWidth / scale))
-            : content;
-        const width = measure(value) * scale;
-        const align = options.align ?? 'left';
-        const left = Math.round(align === 'center' ? x - width / 2 : align === 'right' ? x - width : x);
-        const uses = [];
-        let cursor = 0;
-        for (const char of characters(value)) {
-            const g = glyph(char);
-            if (g.pixels.length > 0) {
-                if (!this.glyphs.has(g.id))
-                    this.glyphs.set(g.id, glyphPath(g));
-                uses.push(cursor === 0 ? `<use href="#${g.id}"/>` : `<use href="#${g.id}" x="${cursor}"/>`);
-            }
-            cursor += g.width + LETTER_SPACING;
-        }
-        if (uses.length > 0) {
-            this.parts.push(`<g fill="${options.fill}" transform="translate(${left} ${y}) scale(${scale})">${uses.join('')}</g>`);
-        }
-        return width;
-    }
-    toString(title, desc) {
-        const defs = [...this.glyphs].map(([id, d]) => `<path id="${id}" d="${d}"/>`).join('');
-        return [
-            `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-labelledby="gc-title gc-desc" shape-rendering="crispEdges">`,
-            `<title id="gc-title">${escapeXml(title)}</title>`,
-            `<desc id="gc-desc">${escapeXml(desc)}</desc>`,
-            `<defs>${defs}</defs>`,
-            ...this.parts,
-            '</svg>',
-            '',
-        ].join('\n');
-    }
-}
 /** Retângulo com cantos "arredondados" em degraus de pixel. */
 function steppedRect(x, y, w, h, step) {
     const s = step;
@@ -2776,7 +2891,17 @@ function footerStats(character, lang, maxWidth = FOOTER_WIDTH) {
 function snap(value) {
     return Math.round(value / 2) * 2;
 }
+/** Gera o SVG do card (640×360). */
 function renderCard(character, options) {
+    const canvas = new Canvas(CARD_WIDTH, CARD_HEIGHT);
+    const { title, desc } = drawCard(canvas, character, options);
+    return canvas.toString(title, desc);
+}
+/**
+ * Desenha o card a partir de (0, 0) num canvas qualquer (a prévia social desenha o card dentro de
+ * uma imagem maior). Devolve o título e a descrição acessível.
+ */
+function drawCard(canvas, character, options) {
     const t = strings(options.lang);
     const theme = THEMES[options.theme];
     const metal = RANK_METALS[character.rank];
@@ -2784,7 +2909,6 @@ function renderCard(character, options) {
     const accentText = ensureContrast(classColor, theme.background, 4.5);
     const rankText = ensureContrast(options.theme === 'dark' ? metal.light : metal.dark, theme.background, 4.5);
     const numberText = (value) => formatNumber(value, options.lang);
-    const canvas = new Canvas();
     const W = CARD_WIDTH;
     const H = CARD_HEIGHT;
     // Moldura: contorno, faixa de metal com luz e sombra, contorno interno e fundo.
@@ -2804,11 +2928,11 @@ function renderCard(character, options) {
     ]) {
         canvas.bitmap(CORNER_GEM, { '#': theme.outline, g: metal.base, w: metal.gem }, gx, gy, 2);
     }
-    // Cabeçalho.
+    // Cabeçalho: a codorna e o nome do projeto.
     canvas.rect(12, 12, W - 24, 34, theme.panel);
     canvas.rect(12, 46, W - 24, 2, theme.panelEdge);
-    canvas.bitmap(['..#..', '.#g#.', '#gwg#', '.#g#.', '..#..'], { '#': theme.outline, g: metal.base, w: metal.gem }, 26, 24, 2);
-    canvas.text(t.card.header, 42, 22, { fill: rankText });
+    canvas.bitmap(MASCOT_ICON, mascotPalette(theme.outline), 22, 14, 2);
+    canvas.text(t.card.header, 62, 22, { fill: rankText });
     canvas.text(`${t.card.since(character.memberSince)} · #${character.cardNumber}`, W - 28, 22, {
         fill: theme.muted,
         align: 'right',
@@ -3005,7 +3129,7 @@ function renderCard(character, options) {
         languages,
         stats: descStats,
     });
-    return canvas.toString(t.a11y.title(character.login), desc);
+    return { title: t.a11y.title(character.login), desc };
 }
 
 ;// CONCATENATED MODULE: ./src/run.ts

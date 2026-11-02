@@ -24,10 +24,16 @@
 <path fill="#fff1b8" d="M632 352h2v2h-2z"/>
 <rect x="12" y="12" width="616" height="34" fill="#1d2431"/>
 <rect x="12" y="46" width="616" height="2" fill="#2d3647"/>
-<path fill="#07090d" d="M30 24h2v2h-2zM28 26h2v2h-2zM32 26h2v2h-2zM26 28h2v2h-2zM34 28h2v2h-2zM28 30h2v2h-2zM32 30h2v2h-2zM30 32h2v2h-2z"/>
-<path fill="#d9a521" d="M30 26h2v2h-2zM28 28h2v2h-2zM32 28h2v2h-2zM30 30h2v2h-2z"/>
-<path fill="#fff1b8" d="M30 28h2v2h-2z"/>
-<g fill="#f7d66b" transform="translate(42 22) scale(2)"><use href="#g43"/><use href="#g4f" x="6"/><use href="#g44" x="12"/><use href="#g4f" x="18"/><use href="#g52" x="24"/><use href="#g4e" x="30"/><use href="#g41" x="36"/><use href="#g43" x="46"/><use href="#g41" x="52"/><use href="#g52" x="58"/><use href="#g44" x="64"/></g>
+<path fill="#07090d" d="M44 14h4v2h-4zM42 16h2v2h-2zM48 16h2v4h-2zM40 18h2v4h-2zM44 18h2v4h-2zM38 20h2v2h-2zM46 20h2v2h-2zM36 22h2v2h-2zM48 22h2v2h-2zM34 24h2v6h-2zM50 24h2v6h-2zM24 28h4v2h-4zM30 28h4v2h-4zM22 30h2v2h-2zM28 30h2v2h-2zM52 30h2v2h-2zM24 32h2v2h-2zM48 32h4v2h-4zM22 34h2v4h-2zM48 34h2v6h-2zM24 38h2v2h-2zM26 40h2v2h-2zM46 40h2v2h-2zM28 42h18v2h-18z"/>
+<path fill="#a8693a" d="M38 22h10v4h-10zM36 24h2v10h-2zM48 24h2v6h-2zM38 26h8v4h-8zM24 30h4v2h-4zM30 30h6v4h-6zM38 30h6v2h-6zM26 32h4v4h-4zM38 32h2v2h-2zM24 34h2v4h-2zM26 36h2v4h-2zM28 40h14v2h-14z"/>
+<path fill="#7d4a26" d="M30 34h10v2h-10zM28 36h4v4h-4zM34 36h6v2h-6zM32 38h4v2h-4zM38 38h2v2h-2z"/>
+<path fill="#f2dfb4" d="M44 30h6v2h-6zM40 32h8v8h-8zM42 40h4v2h-4z"/>
+<path fill="#ead2a0" d="M32 36h2v2h-2zM36 38h2v2h-2z"/>
+<path fill="#1b1420" d="M46 28h2v2h-2z"/>
+<path fill="#ffffff" d="M46 26h2v2h-2z"/>
+<path fill="#f0a830" d="M50 30h2v2h-2z"/>
+<path fill="#6b3f1f" d="M44 16h4v2h-4zM42 18h2v4h-2zM46 18h2v2h-2z"/>
+<g fill="#f7d66b" transform="translate(62 22) scale(2)"><use href="#g43"/><use href="#g4f" x="6"/><use href="#g44" x="12"/><use href="#g4f" x="18"/><use href="#g52" x="24"/><use href="#g4e" x="30"/><use href="#g41" x="36"/><use href="#g43" x="46"/><use href="#g41" x="52"/><use href="#g52" x="58"/><use href="#g44" x="64"/></g>
 <g fill="#a9b1c2" transform="translate(366 22) scale(2)"><use href="#g73"/><use href="#g69" x="6"/><use href="#g6e" x="10"/><use href="#g63" x="16"/><use href="#g65" x="22"/><use href="#g32" x="32"/><use href="#g30" x="38"/><use href="#g31" x="44"/><use href="#g33" x="50"/><use href="#gb7" x="60"/><use href="#g23" x="66"/><use href="#g43" x="72"/><use href="#g42" x="78"/><use href="#g41" x="84"/><use href="#g31" x="90"/><use href="#g2d" x="96"/><use href="#g32" x="100"/><use href="#g34" x="106"/><use href="#g35" x="112"/><use href="#g45" x="118"/></g>
 <rect x="28" y="60" width="120" height="120" fill="#07090d"/>
 <rect x="30" y="62" width="116" height="116" fill="#2d3647"/>
