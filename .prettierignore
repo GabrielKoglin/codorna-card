@@ -1,0 +1,7 @@
+dist/
+node_modules/
+coverage/
+examples/*.svg
+tests/__snapshots__/
+fixtures/
+package-lock.json

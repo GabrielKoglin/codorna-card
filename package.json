@@ -1,0 +1,43 @@
+{
+  "name": "guild-card",
+  "version": "0.1.0",
+  "description": "GitHub Action que transforma sua atividade pública no GitHub em um card de RPG em pixel art para o README do perfil.",
+  "keywords": [
+    "github-action",
+    "readme",
+    "profile",
+    "rpg",
+    "pixel-art",
+    "svg"
+  ],
+  "author": "Gabriel Koglin",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "ncc build src/main.ts -o dist --license licenses.txt",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:update": "vitest run --update",
+    "demo": "tsx scripts/demo.ts",
+    "all": "npm run lint && npm run typecheck && npm test && npm run build && npm run demo"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@vercel/ncc": "0.45.0",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}
