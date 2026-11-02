@@ -9,6 +9,8 @@ export type ThemeName = 'dark' | 'light'
 export type {
   AnonymousRepo,
   PlayerData,
+  PrivateActivity,
+  PrivateYearActivity,
   RepoLanguage,
   RepoLanguages,
   YearActivity,

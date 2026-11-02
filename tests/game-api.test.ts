@@ -52,6 +52,38 @@ describe('src/game é puro (pronto para virar pacote)', () => {
     expect(first.classId).toBe('blacksmith')
   })
 
+  it('no modo completo, os repositórios privados próprios votam na classe e contam em INT', () => {
+    const base: PlayerData = {
+      login: 'x',
+      createdAt: '2020-01-01T00:00:00Z',
+      years: [],
+      mergedPullRequests: 0,
+      mergedPullRequestsElsewhere: 0,
+      repositories: [{ name: 'publico', languages: [{ name: 'Go', color: null, size: 5000 }] }],
+    }
+    const publicOnly = game.buildSheet(base)
+    expect(publicOnly.classId).toBe('ranger')
+    expect(publicOnly.attributes.int).toBe(game.attributeValue(1, 12, 1))
+
+    const full = game.buildSheet({
+      ...base,
+      private: {
+        mergedPullRequests: 0,
+        mergedPullRequestsElsewhere: 0,
+        scannedRepositories: 2,
+        skippedRepositories: 0,
+        repositories: [
+          { languages: [{ name: 'TypeScript', color: '#3178c6', size: 9000 }] },
+          { languages: [{ name: 'JavaScript', color: '#f1e05a', size: 3000 }] },
+        ],
+      },
+    })
+    expect(full.classId).toBe('illusionist')
+    expect(full.languages.map((lang) => lang.name)).toEqual(['Go', 'JavaScript', 'TypeScript'])
+    expect(full.attributes.int).toBe(game.attributeValue(3, 12, 1))
+    expect(game.languageRepositories(base)).toHaveLength(1)
+  })
+
   it('o card usa exatamente a ficha das regras', () => {
     for (const name of ['iniciante', 'veterano']) {
       const data = fixture(name)

@@ -21,14 +21,25 @@
  *
  * Para mostrar só uma parte (por exemplo, o XP de uma atividade nova no jogo), as peças estão
  * exportadas uma a uma: `countActivity` aplica os tetos, `computeXp` soma o XP, `levelProgress`
- * dá o nível, `rankForLevel` a patente, `languageShares` + `dominantClass` a classe e
- * `computeAttributes` os atributos.
+ * dá o nível, `rankForLevel` a patente, `languageShares` + `dominantClass` a classe,
+ * `computeAttributes` os atributos e `privateTotal` o total de contribuições privadas.
+ *
+ * Atividade privada (modo completo do card) entra em `YearActivity.private` e
+ * `PlayerData.private`, com as mesmas regras do público; os tetos valem para a soma dos dois.
  *
  * As regras estão descritas em `docs/regras.md` (pt-BR) e `docs/rules.md` (en). Mudança de regra
  * precisa atualizar os dois documentos e os testes.
  */
 
-export type { AnonymousRepo, PlayerData, RepoLanguage, RepoLanguages, YearActivity } from './types'
+export type {
+  AnonymousRepo,
+  PlayerData,
+  PrivateActivity,
+  PrivateYearActivity,
+  RepoLanguage,
+  RepoLanguages,
+  YearActivity,
+} from './types'
 
 export {
   computeXp,
@@ -37,6 +48,7 @@ export {
   levelForXp,
   levelProgress,
   MAX_LEVEL,
+  privateTotal,
   RANKS,
   rankForLevel,
   summarizeCommits,
@@ -44,6 +56,7 @@ export {
   xpForLevel,
 } from './rules'
 export type {
+  CappedCount,
   CommitSummary,
   Counted,
   CountedActivity,

@@ -35,9 +35,12 @@ export interface CharacterSheet {
   attributes: Attributes
 }
 
-/** Repositórios que votam na classe e contam em INT. */
+/**
+ * Repositórios que votam na classe, entram na barra de linguagens e contam em INT: os próprios e
+ * públicos e, no modo completo, também os próprios e privados (só as linguagens, sem o nome).
+ */
 export function languageRepositories(data: PlayerData): AnonymousRepo[] {
-  return [...data.repositories]
+  return [...data.repositories, ...(data.private?.repositories ?? [])]
 }
 
 /** Calcula a ficha completa. Determinística: os mesmos dados sempre dão a mesma ficha. */

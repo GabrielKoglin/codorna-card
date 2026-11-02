@@ -3,6 +3,10 @@ import type { PlayerData } from './types'
 /**
  * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
  * Os tetos existem para que volume artificial (farm) não vire nível.
+ *
+ * No modo completo (`private-token`), a atividade dos repositórios privados segue esta mesma
+ * tabela, e cada teto vale para a soma de público e privado (o diário, no mesmo dia; os anuais, no
+ * mesmo ano). Assim ninguém dobra um teto dividindo o trabalho entre os dois.
  */
 export const XP_RULES = {
   /** Cada commit vale 2 XP, mas só os 10 primeiros de cada dia contam. */
@@ -30,20 +34,29 @@ export const MAX_LEVEL = 99
 /** XP total para chegar ao nível N = LEVEL_FACTOR × (N − 1)². */
 export const LEVEL_FACTOR = 50
 
-export interface CommitSummary {
-  /** Commits públicos (sem teto). */
+/** Um total com o teto aplicado. */
+export interface CappedCount {
+  /** Total sem teto. */
   raw: number
-  /** Commits que contam para XP (com o teto diário). */
+  /** Quanto conta para XP (com o teto). */
   counted: number
-  /** Dias com pelo menos um commit público. */
+}
+
+/** Um tipo de atividade, com a parte pública e a privada (modo completo) separadas. */
+export interface Counted extends CappedCount {
+  /** Total público, sem teto. */
+  raw: number
+  /** Total em repositórios privados (modo completo), sem teto. Zero sem `private-token`. */
+  privateRaw: number
+  /** Quanto conta para XP. Os tetos valem para a soma de público e privado. */
+  counted: number
+}
+
+export interface CommitSummary extends Counted {
+  /** Dias com pelo menos um commit (público ou, no modo completo, privado). */
   activeDays: number
   /** Dias em que o teto diário cortou commits. */
   cappedDays: number
-}
-
-export interface Counted {
-  raw: number
-  counted: number
 }
 
 export interface CountedActivity {
@@ -53,8 +66,11 @@ export interface CountedActivity {
   reviews: Counted
   merged: Counted
   mergedElsewhere: Counted
-  /** Contribuições privadas (zero quando a opção está desligada). */
-  privateContributions: Counted
+  /**
+   * Contribuições privadas anônimas do perfil (`private-contributions`). Zero quando a opção
+   * está desligada.
+   */
+  privateContributions: CappedCount
 }
 
 export interface XpBreakdown {
@@ -96,16 +112,30 @@ function whole(n: number): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
 }
 
-/** Aplica o teto diário de commits. */
+/**
+ * Aplica o teto diário de commits. Com commits privados (modo completo), o teto vale para a soma
+ * de público e privado de cada dia.
+ */
 export function summarizeCommits(
   commitsByDay: Record<string, number>,
+  privateCommitsByDay: Record<string, number> = {},
   dailyCap: number = XP_RULES.commit.dailyCap,
 ): CommitSummary {
-  const summary: CommitSummary = { raw: 0, counted: 0, activeDays: 0, cappedDays: 0 }
-  for (const value of Object.values(commitsByDay)) {
-    const commits = whole(value)
+  const summary: CommitSummary = {
+    raw: 0,
+    privateRaw: 0,
+    counted: 0,
+    activeDays: 0,
+    cappedDays: 0,
+  }
+  const days = new Set([...Object.keys(commitsByDay), ...Object.keys(privateCommitsByDay)])
+  for (const day of days) {
+    const publicCommits = whole(commitsByDay[day] ?? 0)
+    const privateCommits = whole(privateCommitsByDay[day] ?? 0)
+    const commits = publicCommits + privateCommits
     if (commits === 0) continue
-    summary.raw += commits
+    summary.raw += publicCommits
+    summary.privateRaw += privateCommits
     summary.counted += Math.min(commits, dailyCap)
     summary.activeDays += 1
     if (commits > dailyCap) summary.cappedDays += 1
@@ -113,45 +143,83 @@ export function summarizeCommits(
   return summary
 }
 
+function addDays(target: Record<string, number>, days: Record<string, number>): void {
+  for (const [day, value] of Object.entries(days)) target[day] = (target[day] ?? 0) + whole(value)
+}
+
+/** Soma um ano de um tipo, com o teto anual valendo para público + privado. */
+function addYear(target: Counted, publicCount: number, privateCount: number, cap: number): void {
+  const pub = whole(publicCount)
+  const priv = whole(privateCount)
+  target.raw += pub
+  target.privateRaw += priv
+  target.counted += Math.min(pub + priv, cap)
+}
+
+const blank = (): Counted => ({ raw: 0, privateRaw: 0, counted: 0 })
+
 /** Junta a atividade de todos os anos aplicando os tetos de cada tipo. */
 export function countActivity(data: PlayerData): CountedActivity {
   const commitsByDay: Record<string, number> = {}
-  const issues: Counted = { raw: 0, counted: 0 }
-  const pullRequests: Counted = { raw: 0, counted: 0 }
-  const reviews: Counted = { raw: 0, counted: 0 }
-  const privateContributions: Counted = { raw: 0, counted: 0 }
+  const privateCommitsByDay: Record<string, number> = {}
+  const issues = blank()
+  const pullRequests = blank()
+  const reviews = blank()
+  const privateContributions: CappedCount = { raw: 0, counted: 0 }
 
   for (const year of data.years) {
-    for (const [day, value] of Object.entries(year.commitsByDay)) {
-      commitsByDay[day] = (commitsByDay[day] ?? 0) + whole(value)
-    }
-    const yearIssues = whole(year.issues)
-    const yearPullRequests = whole(year.pullRequests)
-    const yearReviews = whole(year.reviews)
-    issues.raw += yearIssues
-    issues.counted += Math.min(yearIssues, XP_RULES.issue.yearlyCap)
-    pullRequests.raw += yearPullRequests
-    pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap)
-    reviews.raw += yearReviews
-    reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap)
+    addDays(commitsByDay, year.commitsByDay)
+    if (year.private) addDays(privateCommitsByDay, year.private.commitsByDay)
+    addYear(issues, year.issues, year.private?.issues ?? 0, XP_RULES.issue.yearlyCap)
+    addYear(
+      pullRequests,
+      year.pullRequests,
+      year.private?.pullRequests ?? 0,
+      XP_RULES.pullRequest.yearlyCap,
+    )
+    addYear(reviews, year.reviews, year.private?.reviews ?? 0, XP_RULES.review.yearlyCap)
     const yearPrivate = whole(year.privateContributions ?? 0)
     privateContributions.raw += yearPrivate
     privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap)
   }
 
   const mergedRaw = whole(data.mergedPullRequests)
-  const mergedCounted = Math.min(mergedRaw, pullRequests.counted)
+  const mergedPrivate = whole(data.private?.mergedPullRequests ?? 0)
+  const mergedCounted = Math.min(mergedRaw + mergedPrivate, pullRequests.counted)
   const elsewhereRaw = Math.min(whole(data.mergedPullRequestsElsewhere), mergedRaw)
+  const elsewherePrivate = Math.min(
+    whole(data.private?.mergedPullRequestsElsewhere ?? 0),
+    mergedPrivate,
+  )
 
   return {
-    commits: summarizeCommits(commitsByDay),
+    commits: summarizeCommits(commitsByDay, privateCommitsByDay),
     issues,
     pullRequests,
     reviews,
-    merged: { raw: mergedRaw, counted: mergedCounted },
-    mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
+    merged: { raw: mergedRaw, privateRaw: mergedPrivate, counted: mergedCounted },
+    mergedElsewhere: {
+      raw: elsewhereRaw,
+      privateRaw: elsewherePrivate,
+      counted: Math.min(elsewhereRaw + elsewherePrivate, mergedCounted),
+    },
     privateContributions,
   }
+}
+
+/**
+ * Total de contribuições privadas, o número que o card mostra como "N privadas": as anônimas do
+ * perfil (`private-contributions`) mais commits, issues, PRs abertos e reviews contados nos
+ * repositórios privados (modo completo). Sem teto, como os outros números do rodapé.
+ */
+export function privateTotal(activity: CountedActivity): number {
+  return (
+    activity.privateContributions.raw +
+    activity.commits.privateRaw +
+    activity.issues.privateRaw +
+    activity.pullRequests.privateRaw +
+    activity.reviews.privateRaw
+  )
 }
 
 export function computeXp(activity: CountedActivity): XpBreakdown {

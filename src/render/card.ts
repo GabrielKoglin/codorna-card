@@ -1,6 +1,7 @@
-import { ATTRIBUTES } from '../game/attributes'
 import type { Character } from '../character'
+import { ATTRIBUTES } from '../game/attributes'
 import { classDef } from '../game/classes'
+import { privateTotal } from '../game/rules'
 import { seededRandom } from '../hash'
 import { formatNumber, strings } from '../i18n'
 import type { Lang, ThemeName } from '../types'
@@ -47,8 +48,10 @@ const FOOTER_SCALE = 2
 /**
  * Números do rodapé, do jeito mais completo que couber: rótulos longos; depois "PRs" no lugar de
  * "PRs mesclados"; depois números compactos (16,7k); em último caso, menos itens. Issues ficam
- * de fora (estão no resumo do job e na descrição acessível). As contribuições privadas só
- * aparecem quando existem, o que exige `private-contributions: true`.
+ * de fora (estão no resumo do job e na descrição acessível). Commits, PRs e reviews são os
+ * públicos. As privadas viram um total só ("N privadas", a soma das anônimas do perfil e das do
+ * modo completo) e só aparecem quando existem, o que exige `private-contributions` ou
+ * `private-token`.
  */
 export function footerStats(character: Character, lang: Lang, maxWidth = FOOTER_WIDTH): StatItem[] {
   const t = strings(lang)
@@ -58,7 +61,7 @@ export function footerStats(character: Character, lang: Lang, maxWidth = FOOTER_
     [activity.merged.raw, t.card.stats.merged, t.card.stats.mergedShort],
     [activity.reviews.raw, t.card.stats.reviews, t.card.stats.reviews],
   ]
-  const privateCount = activity.privateContributions.raw
+  const privateCount = privateTotal(activity)
   if (privateCount > 0) entries.push([privateCount, t.card.stats.private, t.card.stats.private])
   const fits = (items: StatItem[]) => measure(statText(items)) * FOOTER_SCALE <= maxWidth
   let items: StatItem[] = []
@@ -336,7 +339,7 @@ export function drawCard(
     canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted })
   }
 
-  // Números públicos (e as contribuições privadas, quando a opção está ligada).
+  // Números públicos (e o total de privadas, quando alguma das opções privadas está ligada).
   let sx = bottomX
   footerStats(character, options.lang, bottomW).forEach(([value, label], i) => {
     if (i > 0) sx += canvas.text(' · ', sx, 326, { fill: theme.muted })
@@ -350,7 +353,7 @@ export function drawCard(
     [numberText(activity.reviews.raw), t.card.stats.reviews(activity.reviews.raw)],
     [numberText(activity.issues.raw), t.card.stats.issues(activity.issues.raw)],
   ]
-  const privateCount = activity.privateContributions.raw
+  const privateCount = privateTotal(activity)
   if (privateCount > 0)
     descItems.push([numberText(privateCount), t.card.stats.privateLong(privateCount)])
   const descStats = statText(descItems)

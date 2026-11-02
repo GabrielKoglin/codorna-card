@@ -83,6 +83,10 @@ function appendSummary(env, markdown) {
 /**
  * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
  * Os tetos existem para que volume artificial (farm) não vire nível.
+ *
+ * No modo completo (`private-token`), a atividade dos repositórios privados segue esta mesma
+ * tabela, e cada teto vale para a soma de público e privado (o diário, no mesmo dia; os anuais, no
+ * mesmo ano). Assim ninguém dobra um teto dividindo o trabalho entre os dois.
  */
 const XP_RULES = {
     /** Cada commit vale 2 XP, mas só os 10 primeiros de cada dia contam. */
@@ -120,14 +124,27 @@ const RANKS = [
 function whole(n) {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
-/** Aplica o teto diário de commits. */
-function summarizeCommits(commitsByDay, dailyCap = XP_RULES.commit.dailyCap) {
-    const summary = { raw: 0, counted: 0, activeDays: 0, cappedDays: 0 };
-    for (const value of Object.values(commitsByDay)) {
-        const commits = whole(value);
+/**
+ * Aplica o teto diário de commits. Com commits privados (modo completo), o teto vale para a soma
+ * de público e privado de cada dia.
+ */
+function summarizeCommits(commitsByDay, privateCommitsByDay = {}, dailyCap = XP_RULES.commit.dailyCap) {
+    const summary = {
+        raw: 0,
+        privateRaw: 0,
+        counted: 0,
+        activeDays: 0,
+        cappedDays: 0,
+    };
+    const days = new Set([...Object.keys(commitsByDay), ...Object.keys(privateCommitsByDay)]);
+    for (const day of days) {
+        const publicCommits = whole(commitsByDay[day] ?? 0);
+        const privateCommits = whole(privateCommitsByDay[day] ?? 0);
+        const commits = publicCommits + privateCommits;
         if (commits === 0)
             continue;
-        summary.raw += commits;
+        summary.raw += publicCommits;
+        summary.privateRaw += privateCommits;
         summary.counted += Math.min(commits, dailyCap);
         summary.activeDays += 1;
         if (commits > dailyCap)
@@ -135,42 +152,68 @@ function summarizeCommits(commitsByDay, dailyCap = XP_RULES.commit.dailyCap) {
     }
     return summary;
 }
+function addDays(target, days) {
+    for (const [day, value] of Object.entries(days))
+        target[day] = (target[day] ?? 0) + whole(value);
+}
+/** Soma um ano de um tipo, com o teto anual valendo para público + privado. */
+function addYear(target, publicCount, privateCount, cap) {
+    const pub = whole(publicCount);
+    const priv = whole(privateCount);
+    target.raw += pub;
+    target.privateRaw += priv;
+    target.counted += Math.min(pub + priv, cap);
+}
+const blank = () => ({ raw: 0, privateRaw: 0, counted: 0 });
 /** Junta a atividade de todos os anos aplicando os tetos de cada tipo. */
 function countActivity(data) {
     const commitsByDay = {};
-    const issues = { raw: 0, counted: 0 };
-    const pullRequests = { raw: 0, counted: 0 };
-    const reviews = { raw: 0, counted: 0 };
+    const privateCommitsByDay = {};
+    const issues = blank();
+    const pullRequests = blank();
+    const reviews = blank();
     const privateContributions = { raw: 0, counted: 0 };
     for (const year of data.years) {
-        for (const [day, value] of Object.entries(year.commitsByDay)) {
-            commitsByDay[day] = (commitsByDay[day] ?? 0) + whole(value);
-        }
-        const yearIssues = whole(year.issues);
-        const yearPullRequests = whole(year.pullRequests);
-        const yearReviews = whole(year.reviews);
-        issues.raw += yearIssues;
-        issues.counted += Math.min(yearIssues, XP_RULES.issue.yearlyCap);
-        pullRequests.raw += yearPullRequests;
-        pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap);
-        reviews.raw += yearReviews;
-        reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap);
+        addDays(commitsByDay, year.commitsByDay);
+        if (year.private)
+            addDays(privateCommitsByDay, year.private.commitsByDay);
+        addYear(issues, year.issues, year.private?.issues ?? 0, XP_RULES.issue.yearlyCap);
+        addYear(pullRequests, year.pullRequests, year.private?.pullRequests ?? 0, XP_RULES.pullRequest.yearlyCap);
+        addYear(reviews, year.reviews, year.private?.reviews ?? 0, XP_RULES.review.yearlyCap);
         const yearPrivate = whole(year.privateContributions ?? 0);
         privateContributions.raw += yearPrivate;
         privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap);
     }
     const mergedRaw = whole(data.mergedPullRequests);
-    const mergedCounted = Math.min(mergedRaw, pullRequests.counted);
+    const mergedPrivate = whole(data.private?.mergedPullRequests ?? 0);
+    const mergedCounted = Math.min(mergedRaw + mergedPrivate, pullRequests.counted);
     const elsewhereRaw = Math.min(whole(data.mergedPullRequestsElsewhere), mergedRaw);
+    const elsewherePrivate = Math.min(whole(data.private?.mergedPullRequestsElsewhere ?? 0), mergedPrivate);
     return {
-        commits: summarizeCommits(commitsByDay),
+        commits: summarizeCommits(commitsByDay, privateCommitsByDay),
         issues,
         pullRequests,
         reviews,
-        merged: { raw: mergedRaw, counted: mergedCounted },
-        mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
+        merged: { raw: mergedRaw, privateRaw: mergedPrivate, counted: mergedCounted },
+        mergedElsewhere: {
+            raw: elsewhereRaw,
+            privateRaw: elsewherePrivate,
+            counted: Math.min(elsewhereRaw + elsewherePrivate, mergedCounted),
+        },
         privateContributions,
     };
+}
+/**
+ * Total de contribuições privadas, o número que o card mostra como "N privadas": as anônimas do
+ * perfil (`private-contributions`) mais commits, issues, PRs abertos e reviews contados nos
+ * repositórios privados (modo completo). Sem teto, como os outros números do rodapé.
+ */
+function privateTotal(activity) {
+    return (activity.privateContributions.raw +
+        activity.commits.privateRaw +
+        activity.issues.privateRaw +
+        activity.pullRequests.privateRaw +
+        activity.reviews.privateRaw);
 }
 function computeXp(activity) {
     const commits = activity.commits.counted * XP_RULES.commit.xp;
@@ -652,9 +695,12 @@ function computeAttributes(activity, repositories) {
 
 
 
-/** Repositórios que votam na classe e contam em INT. */
+/**
+ * Repositórios que votam na classe, entram na barra de linguagens e contam em INT: os próprios e
+ * públicos e, no modo completo, também os próprios e privados (só as linguagens, sem o nome).
+ */
 function languageRepositories(data) {
-    return [...data.repositories];
+    return [...data.repositories, ...(data.private?.repositories ?? [])];
 }
 /** Calcula a ficha completa. Determinística: os mesmos dados sempre dão a mesma ficha. */
 function buildSheet(data) {
@@ -700,8 +746,11 @@ function buildSheet(data) {
  *
  * Para mostrar só uma parte (por exemplo, o XP de uma atividade nova no jogo), as peças estão
  * exportadas uma a uma: `countActivity` aplica os tetos, `computeXp` soma o XP, `levelProgress`
- * dá o nível, `rankForLevel` a patente, `languageShares` + `dominantClass` a classe e
- * `computeAttributes` os atributos.
+ * dá o nível, `rankForLevel` a patente, `languageShares` + `dominantClass` a classe,
+ * `computeAttributes` os atributos e `privateTotal` o total de contribuições privadas.
+ *
+ * Atividade privada (modo completo do card) entra em `YearActivity.private` e
+ * `PlayerData.private`, com as mesmas regras do público; os tetos valem para a soma dos dois.
  *
  * As regras estão descritas em `docs/regras.md` (pt-BR) e `docs/rules.md` (en). Mudança de regra
  * precisa atualizar os dois documentos e os testes.
@@ -2885,6 +2934,7 @@ const RANK_METALS = {
 
 
 
+
 const CARD_WIDTH = 640;
 const CARD_HEIGHT = 360;
 /** Retângulo com cantos "arredondados" em degraus de pixel. */
@@ -2904,8 +2954,10 @@ const FOOTER_SCALE = 2;
 /**
  * Números do rodapé, do jeito mais completo que couber: rótulos longos; depois "PRs" no lugar de
  * "PRs mesclados"; depois números compactos (16,7k); em último caso, menos itens. Issues ficam
- * de fora (estão no resumo do job e na descrição acessível). As contribuições privadas só
- * aparecem quando existem, o que exige `private-contributions: true`.
+ * de fora (estão no resumo do job e na descrição acessível). Commits, PRs e reviews são os
+ * públicos. As privadas viram um total só ("N privadas", a soma das anônimas do perfil e das do
+ * modo completo) e só aparecem quando existem, o que exige `private-contributions` ou
+ * `private-token`.
  */
 function footerStats(character, lang, maxWidth = FOOTER_WIDTH) {
     const t = strings(lang);
@@ -2915,7 +2967,7 @@ function footerStats(character, lang, maxWidth = FOOTER_WIDTH) {
         [activity.merged.raw, t.card.stats.merged, t.card.stats.mergedShort],
         [activity.reviews.raw, t.card.stats.reviews, t.card.stats.reviews],
     ];
-    const privateCount = activity.privateContributions.raw;
+    const privateCount = privateTotal(activity);
     if (privateCount > 0)
         entries.push([privateCount, t.card.stats.private, t.card.stats.private]);
     const fits = (items) => measure(statText(items)) * FOOTER_SCALE <= maxWidth;
@@ -3145,7 +3197,7 @@ function drawCard(canvas, character, options) {
     else {
         canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted });
     }
-    // Números públicos (e as contribuições privadas, quando a opção está ligada).
+    // Números públicos (e o total de privadas, quando alguma das opções privadas está ligada).
     let sx = bottomX;
     footerStats(character, options.lang, bottomW).forEach(([value, label], i) => {
         if (i > 0)
@@ -3160,7 +3212,7 @@ function drawCard(canvas, character, options) {
         [numberText(activity.reviews.raw), t.card.stats.reviews(activity.reviews.raw)],
         [numberText(activity.issues.raw), t.card.stats.issues(activity.issues.raw)],
     ];
-    const privateCount = activity.privateContributions.raw;
+    const privateCount = privateTotal(activity);
     if (privateCount > 0)
         descItems.push([numberText(privateCount), t.card.stats.privateLong(privateCount)]);
     const descStats = statText(descItems);

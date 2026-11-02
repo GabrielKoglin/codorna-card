@@ -163,6 +163,40 @@ describe('rodapé', () => {
     expect(svg).toContain('2.494 reviews · 512 issues · 3.456 contribuições privadas.')
   })
 
+  it('modo completo: os números públicos não mudam e as privadas somam tudo num total', () => {
+    const base = fixture('iniciante')
+    const character = buildCharacter({
+      ...base,
+      years: base.years.map((year) => ({
+        ...year,
+        privateContributions: 6,
+        private: {
+          commitsByDay: { '2026-07-01': 1000, '2026-07-02': 200 },
+          issues: 4,
+          pullRequests: 30,
+          reviews: 20,
+        },
+      })),
+      private: {
+        mergedPullRequests: 25,
+        mergedPullRequestsElsewhere: 5,
+        repositories: [],
+        scannedRepositories: 3,
+        skippedRepositories: 0,
+      },
+    })
+    // 6 anônimas + 1.200 commits + 4 issues + 30 PRs + 20 reviews.
+    expect(statText(footerStats(character, 'pt-BR'))).toBe(
+      '169 commits · 3 PRs mesclados · 1 review · 1.260 privadas',
+    )
+    const svg = renderCard(character, { theme: 'light', lang: 'en' })
+    expect(svg).toContain('1 review · 3 issues · 1,260 private contributions.')
+    // O teto diário vale para a soma: 07-01 tinha 2 públicos e ganha 8; 07-02 ganha 10.
+    const publicOnly = buildCharacter(base).activity.commits
+    expect(character.activity.commits.counted).toBe(publicOnly.counted + 8 + 10)
+    expect(character.activity.commits.activeDays).toBe(publicOnly.activeDays + 1)
+  })
+
   it('sem privadas, o rodapé continua igual', () => {
     const character = buildCharacter(fixture('veterano'))
     expect(statText(footerStats(character, 'pt-BR'))).toBe(
