@@ -111,6 +111,10 @@ export interface Strings {
     branchNotFound: (branch: string) => string
     protectedBranch: (branch: string) => string
     unexpected: (detail: string) => string
+    /** Texto no lugar da mensagem da API quando ela pode ter nomes privados. */
+    hiddenDetail: string
+    readOnlyClient: string
+    noData: string
   }
   summary: {
     title: (login: string) => string
@@ -253,6 +257,10 @@ const PT_BR: Strings = {
     protectedBranch: (branch) =>
       `A branch "${branch}" está protegida e recusou o commit. Libere o github-actions[bot] nas regras da branch ou use \`commit: false\`.`,
     unexpected: (detail) => `Erro inesperado: ${detail}`,
+    hiddenDetail: 'detalhes omitidos para não expor nomes privados',
+    readOnlyClient:
+      'O private-token é só de leitura: o Codorna Card nunca escreve nada com ele (erro interno).',
+    noData: 'resposta sem dados',
   },
   summary: {
     title: (login) => `Codorna Card de @${login}`,
@@ -394,6 +402,10 @@ const EN: Strings = {
     protectedBranch: (branch) =>
       `Branch "${branch}" is protected and rejected the commit. Allow github-actions[bot] in the branch rules or use \`commit: false\`.`,
     unexpected: (detail) => `Unexpected error: ${detail}`,
+    hiddenDetail: 'details hidden so no private names are exposed',
+    readOnlyClient:
+      'The private-token is read-only: Codorna Card never writes anything with it (internal error).',
+    noData: 'response without data',
   },
   summary: {
     title: (login) => `Codorna Card of @${login}`,

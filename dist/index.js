@@ -933,6 +933,9 @@ const PT_BR = {
         branchNotFound: (branch) => `Branch "${branch}" não encontrada no repositório.`,
         protectedBranch: (branch) => `A branch "${branch}" está protegida e recusou o commit. Libere o github-actions[bot] nas regras da branch ou use \`commit: false\`.`,
         unexpected: (detail) => `Erro inesperado: ${detail}`,
+        hiddenDetail: 'detalhes omitidos para não expor nomes privados',
+        readOnlyClient: 'O private-token é só de leitura: o Codorna Card nunca escreve nada com ele (erro interno).',
+        noData: 'resposta sem dados',
     },
     summary: {
         title: (login) => `Codorna Card de @${login}`,
@@ -1056,6 +1059,9 @@ const EN = {
         branchNotFound: (branch) => `Branch "${branch}" was not found in the repository.`,
         protectedBranch: (branch) => `Branch "${branch}" is protected and rejected the commit. Allow github-actions[bot] in the branch rules or use \`commit: false\`.`,
         unexpected: (detail) => `Unexpected error: ${detail}`,
+        hiddenDetail: 'details hidden so no private names are exposed',
+        readOnlyClient: 'The private-token is read-only: Codorna Card never writes anything with it (internal error).',
+        noData: 'response without data',
     },
     summary: {
         title: (login) => `Codorna Card of @${login}`,
@@ -1097,6 +1103,16 @@ class CodornaCardError extends Error {
 ;// CONCATENATED MODULE: ./src/github/client.ts
 
 
+/** Tipos de erro GraphQL que só afetam um pedaço da resposta (o resto dos dados vem). */
+const PARTIAL_TYPES = new Set(['FORBIDDEN', 'NOT_FOUND']);
+function partialError(error) {
+    const sso = error.extensions?.saml_failure === true ||
+        /\bSAML\b|single sign-on|\bSSO\b/i.test(error.message ?? '');
+    return {
+        kind: error.type === 'NOT_FOUND' ? 'not-found' : sso ? 'sso' : 'forbidden',
+        path: Array.isArray(error.path) ? error.path : [],
+    };
+}
 /** Mínimo de pontos de API antes de avisar nos logs. */
 const LOW_RATE_LIMIT = 100;
 /** Espera máxima aceita num `retry-after` antes de desistir (segundos). */
@@ -1133,6 +1149,8 @@ class GitHubClient {
     warn;
     maxRetries;
     timeoutMs;
+    redact;
+    readOnly;
     warnedLowLimit = false;
     constructor(options) {
         const t = strings(options.lang);
@@ -1148,9 +1166,25 @@ class GitHubClient {
         this.warn = options.warn ?? this.log;
         this.maxRetries = options.maxRetries ?? 3;
         this.timeoutMs = options.timeoutMs ?? 30_000;
+        this.redact = options.redact ?? false;
+        this.readOnly = options.readOnly ?? false;
     }
     get t() {
         return strings(this.lang);
+    }
+    /** Texto da API para uma mensagem de erro, ou o aviso de que foi omitido. */
+    detail(text) {
+        return this.redact ? this.t.errors.hiddenDetail : text;
+    }
+    /** Detalhe de erros GraphQL. Mensagens de FORBIDDEN nunca entram: podem citar organizações. */
+    graphqlDetail(errors) {
+        if (this.redact) {
+            const types = [...new Set(errors.map((error) => error.type || '?'))].join(', ');
+            return `${types} (${this.t.errors.hiddenDetail})`;
+        }
+        return errors
+            .map((error) => error.type === 'FORBIDDEN' ? 'FORBIDDEN' : (error.message ?? error.type ?? '?'))
+            .join('; ');
     }
     async wait(attempt, seconds) {
         const delay = seconds ?? 2 ** (attempt - 1);
@@ -1213,6 +1247,20 @@ class GitHubClient {
     }
     /** Consulta GraphQL. Erros parciais viram exceção (com tipo NOT_FOUND identificado). */
     async graphql(query, variables) {
+        return (await this.execute(query, variables, false)).data;
+    }
+    /**
+     * Consulta GraphQL que aceita resposta parcial: quando só alguns campos falham por falta de
+     * acesso (FORBIDDEN, inclusive SSO) ou por não existirem (NOT_FOUND), devolve os dados que
+     * vieram e a lista desses erros, sem as mensagens originais. Qualquer outro erro vira exceção.
+     */
+    async graphqlPartial(query, variables) {
+        return this.execute(query, variables, true);
+    }
+    async execute(query, variables, allowPartial) {
+        if (this.readOnly && /\bmutation\b/i.test(query)) {
+            throw new CodornaCardError('input', this.t.errors.readOnlyClient);
+        }
         for (let attempt = 1;; attempt++) {
             const response = await this.request(this.graphqlUrl, {
                 method: 'POST',
@@ -1220,40 +1268,46 @@ class GitHubClient {
                 body: JSON.stringify({ query, variables }),
             });
             if (response.status === 403) {
-                throw new CodornaCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)));
+                throw new CodornaCardError('forbidden', this.t.errors.forbidden(this.detail(messageFrom(response.body))));
             }
             if (response.status >= 400) {
-                throw new CodornaCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
+                throw new CodornaCardError('api', this.t.errors.api(response.status, this.detail(messageFrom(response.body))));
             }
             let payload;
             try {
                 payload = JSON.parse(response.body);
             }
             catch {
-                throw new CodornaCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
+                throw new CodornaCardError('api', this.t.errors.api(response.status, this.detail(messageFrom(response.body))));
             }
-            const errors = payload.errors ?? [];
+            const errors = Array.isArray(payload.errors) ? payload.errors : [];
             if (errors.length > 0) {
                 if (errors.some((error) => error.type === 'RATE_LIMITED')) {
                     throw new CodornaCardError('rate-limit', this.t.errors.rateLimited(resetFrom(response.headers)));
                 }
+                if (allowPartial &&
+                    payload.data &&
+                    errors.every((error) => PARTIAL_TYPES.has(error.type ?? ''))) {
+                    this.trackRateLimit(payload.data.rateLimit);
+                    return { data: payload.data, errors: errors.map(partialError) };
+                }
                 const notFound = errors.find((error) => error.type === 'NOT_FOUND');
                 if (notFound) {
-                    throw new CodornaCardError('not-found', this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'));
+                    throw new CodornaCardError('not-found', this.t.errors.graphql(this.graphqlDetail([notFound])));
                 }
-                const detail = errors.map((error) => error.message ?? error.type ?? '?').join('; ');
+                const messages = errors.map((error) => error.message ?? '').join('; ');
                 // O GitHub às vezes responde "Something went wrong" quando a consulta demora; vale repetir.
-                const transient = /something went wrong|timeout|timed out/i.test(detail);
+                const transient = /something went wrong|timeout|timed out/i.test(messages);
                 if (transient && attempt <= this.maxRetries) {
                     await this.wait(attempt);
                     continue;
                 }
-                throw new CodornaCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail));
+                throw new CodornaCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(this.graphqlDetail(errors)));
             }
             if (!payload.data)
-                throw new CodornaCardError('graphql', this.t.errors.graphql('resposta sem dados'));
+                throw new CodornaCardError('graphql', this.t.errors.graphql(this.t.errors.noData));
             this.trackRateLimit(payload.data.rateLimit);
-            return payload.data;
+            return { data: payload.data, errors: [] };
         }
     }
     trackRateLimit(info) {
@@ -1267,6 +1321,9 @@ class GitHubClient {
     }
     /** Chamada REST. Devolve status e JSON; quem chama decide o que cada status significa. */
     async rest(method, path, body) {
+        if (this.readOnly && method !== 'GET') {
+            throw new CodornaCardError('input', this.t.errors.readOnlyClient);
+        }
         const response = await this.request(`${this.apiUrl}${path}`, {
             method,
             headers: {
@@ -1283,7 +1340,7 @@ class GitHubClient {
         catch {
             data = null;
         }
-        return { status: response.status, data, message: messageFrom(response.body) };
+        return { status: response.status, data, message: this.detail(messageFrom(response.body)) };
     }
 }
 

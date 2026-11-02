@@ -16,6 +16,13 @@ export interface ClientOptions {
   /** Novas tentativas para falhas temporárias (rede, 5xx, limite secundário). */
   maxRetries?: number
   timeoutMs?: number
+  /**
+   * Nunca põe texto vindo da API nas mensagens de erro (só status e tipo). É o modo do
+   * `private-token`: mensagens do GitHub podem citar organizações e repositórios privados.
+   */
+  redact?: boolean
+  /** Recusa mutações GraphQL e chamadas REST que não sejam GET. É o modo do `private-token`. */
+  readOnly?: boolean
 }
 
 export interface RateLimitInfo {
@@ -33,6 +40,30 @@ interface GraphQLError {
   type?: string
   message?: string
   path?: (string | number)[]
+  extensions?: { saml_failure?: boolean }
+}
+
+/**
+ * Erro parcial de uma consulta GraphQL, sem a mensagem original (que pode ter nomes privados):
+ * só o tipo e o caminho do campo que falhou.
+ */
+export interface PartialError {
+  /** `sso`: organização com SAML SSO e token não autorizado; `forbidden`: sem acesso. */
+  kind: 'sso' | 'forbidden' | 'not-found'
+  path: (string | number)[]
+}
+
+/** Tipos de erro GraphQL que só afetam um pedaço da resposta (o resto dos dados vem). */
+const PARTIAL_TYPES = new Set(['FORBIDDEN', 'NOT_FOUND'])
+
+function partialError(error: GraphQLError): PartialError {
+  const sso =
+    error.extensions?.saml_failure === true ||
+    /\bSAML\b|single sign-on|\bSSO\b/i.test(error.message ?? '')
+  return {
+    kind: error.type === 'NOT_FOUND' ? 'not-found' : sso ? 'sso' : 'forbidden',
+    path: Array.isArray(error.path) ? error.path : [],
+  }
 }
 
 /** Mínimo de pontos de API antes de avisar nos logs. */
@@ -74,6 +105,8 @@ export class GitHubClient {
   private readonly warn: (message: string) => void
   private readonly maxRetries: number
   private readonly timeoutMs: number
+  private readonly redact: boolean
+  private readonly readOnly: boolean
   private warnedLowLimit = false
 
   constructor(options: ClientOptions) {
@@ -89,10 +122,30 @@ export class GitHubClient {
     this.warn = options.warn ?? this.log
     this.maxRetries = options.maxRetries ?? 3
     this.timeoutMs = options.timeoutMs ?? 30_000
+    this.redact = options.redact ?? false
+    this.readOnly = options.readOnly ?? false
   }
 
   private get t() {
     return strings(this.lang)
+  }
+
+  /** Texto da API para uma mensagem de erro, ou o aviso de que foi omitido. */
+  private detail(text: string): string {
+    return this.redact ? this.t.errors.hiddenDetail : text
+  }
+
+  /** Detalhe de erros GraphQL. Mensagens de FORBIDDEN nunca entram: podem citar organizações. */
+  private graphqlDetail(errors: readonly GraphQLError[]): string {
+    if (this.redact) {
+      const types = [...new Set(errors.map((error) => error.type || '?'))].join(', ')
+      return `${types} (${this.t.errors.hiddenDetail})`
+    }
+    return errors
+      .map((error) =>
+        error.type === 'FORBIDDEN' ? 'FORBIDDEN' : (error.message ?? error.type ?? '?'),
+      )
+      .join('; ')
   }
 
   private async wait(attempt: number, seconds?: number): Promise<void> {
@@ -164,6 +217,29 @@ export class GitHubClient {
 
   /** Consulta GraphQL. Erros parciais viram exceção (com tipo NOT_FOUND identificado). */
   async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+    return (await this.execute<T>(query, variables, false)).data
+  }
+
+  /**
+   * Consulta GraphQL que aceita resposta parcial: quando só alguns campos falham por falta de
+   * acesso (FORBIDDEN, inclusive SSO) ou por não existirem (NOT_FOUND), devolve os dados que
+   * vieram e a lista desses erros, sem as mensagens originais. Qualquer outro erro vira exceção.
+   */
+  async graphqlPartial<T>(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<{ data: T; errors: PartialError[] }> {
+    return this.execute<T>(query, variables, true)
+  }
+
+  private async execute<T>(
+    query: string,
+    variables: Record<string, unknown>,
+    allowPartial: boolean,
+  ): Promise<{ data: T; errors: PartialError[] }> {
+    if (this.readOnly && /\bmutation\b/i.test(query)) {
+      throw new CodornaCardError('input', this.t.errors.readOnlyClient)
+    }
     for (let attempt = 1; ; attempt++) {
       const response = await this.request(this.graphqlUrl, {
         method: 'POST',
@@ -171,16 +247,19 @@ export class GitHubClient {
         body: JSON.stringify({ query, variables }),
       })
       if (response.status === 403) {
-        throw new CodornaCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)))
+        throw new CodornaCardError(
+          'forbidden',
+          this.t.errors.forbidden(this.detail(messageFrom(response.body))),
+        )
       }
       if (response.status >= 400) {
         throw new CodornaCardError(
           'api',
-          this.t.errors.api(response.status, messageFrom(response.body)),
+          this.t.errors.api(response.status, this.detail(messageFrom(response.body))),
         )
       }
       let payload: {
-        data?: T & { rateLimit?: { remaining: number; resetAt: string } }
+        data?: (T & { rateLimit?: { remaining: number; resetAt: string } }) | null
         errors?: GraphQLError[]
       }
       try {
@@ -188,10 +267,10 @@ export class GitHubClient {
       } catch {
         throw new CodornaCardError(
           'api',
-          this.t.errors.api(response.status, messageFrom(response.body)),
+          this.t.errors.api(response.status, this.detail(messageFrom(response.body))),
         )
       }
-      const errors = payload.errors ?? []
+      const errors = Array.isArray(payload.errors) ? payload.errors : []
       if (errors.length > 0) {
         if (errors.some((error) => error.type === 'RATE_LIMITED')) {
           throw new CodornaCardError(
@@ -199,26 +278,37 @@ export class GitHubClient {
             this.t.errors.rateLimited(resetFrom(response.headers)),
           )
         }
+        if (
+          allowPartial &&
+          payload.data &&
+          errors.every((error) => PARTIAL_TYPES.has(error.type ?? ''))
+        ) {
+          this.trackRateLimit(payload.data.rateLimit)
+          return { data: payload.data, errors: errors.map(partialError) }
+        }
         const notFound = errors.find((error) => error.type === 'NOT_FOUND')
         if (notFound) {
           throw new CodornaCardError(
             'not-found',
-            this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'),
+            this.t.errors.graphql(this.graphqlDetail([notFound])),
           )
         }
-        const detail = errors.map((error) => error.message ?? error.type ?? '?').join('; ')
+        const messages = errors.map((error) => error.message ?? '').join('; ')
         // O GitHub às vezes responde "Something went wrong" quando a consulta demora; vale repetir.
-        const transient = /something went wrong|timeout|timed out/i.test(detail)
+        const transient = /something went wrong|timeout|timed out/i.test(messages)
         if (transient && attempt <= this.maxRetries) {
           await this.wait(attempt)
           continue
         }
-        throw new CodornaCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail))
+        throw new CodornaCardError(
+          transient ? 'timeout' : 'graphql',
+          this.t.errors.graphql(this.graphqlDetail(errors)),
+        )
       }
       if (!payload.data)
-        throw new CodornaCardError('graphql', this.t.errors.graphql('resposta sem dados'))
+        throw new CodornaCardError('graphql', this.t.errors.graphql(this.t.errors.noData))
       this.trackRateLimit(payload.data.rateLimit)
-      return payload.data
+      return { data: payload.data, errors: [] }
     }
   }
 
@@ -237,6 +327,9 @@ export class GitHubClient {
     path: string,
     body?: unknown,
   ): Promise<{ status: number; data: T | null; message: string }> {
+    if (this.readOnly && method !== 'GET') {
+      throw new CodornaCardError('input', this.t.errors.readOnlyClient)
+    }
     const response = await this.request(`${this.apiUrl}${path}`, {
       method,
       headers: {
@@ -252,6 +345,6 @@ export class GitHubClient {
     } catch {
       data = null
     }
-    return { status: response.status, data, message: messageFrom(response.body) }
+    return { status: response.status, data, message: this.detail(messageFrom(response.body)) }
   }
 }
