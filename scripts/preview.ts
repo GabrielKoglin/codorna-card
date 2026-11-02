@@ -1,7 +1,8 @@
 /**
  * Prévia local do card de qualquer pessoa, sem comitar nada.
- * Uso: npm run preview -- --user <login> [--lang pt-BR|en] [--private] [--out <pasta>]
+ * Uso: npm run preview -- --user <login> [--lang pt-BR|en] [--private] [--private-token] [--out <pasta>]
  * Token: GITHUB_TOKEN ou, se estiver vazio, `gh auth token`.
+ * Modo completo (--private-token): CODORNA_TOKEN ou, se estiver vazio, `gh auth token`.
  */
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

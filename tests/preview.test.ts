@@ -2,8 +2,14 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { parsePreviewArgs, preview, resolveToken, UsageError } from '../scripts/lib/preview'
-import { fakeGitHub, sampleUser } from './helpers/fake-github'
+import {
+  parsePreviewArgs,
+  preview,
+  resolvePrivateToken,
+  resolveToken,
+  UsageError,
+} from '../scripts/lib/preview'
+import { fakeGitHub, privateSample, sampleUser, SECRET_NAMES } from './helpers/fake-github'
 
 const NOW = new Date('2026-11-02T12:00:00Z')
 
@@ -43,6 +49,33 @@ describe('argumentos da prévia', () => {
     expect(() => parsePreviewArgs(['--user', 'nome com espaço'], {})).toThrow(UsageError)
     expect(() => parsePreviewArgs(['--user', 'a', '--lang', 'fr'], {})).toThrow('Idioma inválido')
   })
+
+  it('--private-token liga o modo completo (também por npm_config_private_token)', () => {
+    expect(parsePreviewArgs(['--user', 'a', '--private-token'], {}).privateToken).toBe(true)
+    expect(parsePreviewArgs(['a', '--private-token=true'], {}).privateToken).toBe(true)
+    expect(parsePreviewArgs(['a'], {}).privateToken).toBe(false)
+    expect(
+      parsePreviewArgs([], { npm_config_user: 'a', npm_config_private_token: 'true' }),
+    ).toMatchObject({ user: 'a', privateToken: true })
+  })
+
+  it('nunca aceita token na linha de comando e não repete o valor', () => {
+    for (const argv of [
+      ['--user', 'a', '--private-token=ghp_abc123'],
+      ['ghp_abc123', '--private-token'],
+      ['--user', 'github_pat_11ABCdef'],
+      ['--user', 'a', '--private-token', 'gho_xyz'],
+    ]) {
+      let message = ''
+      try {
+        parsePreviewArgs(argv, {})
+      } catch (error) {
+        message = (error as Error).message
+      }
+      expect(message, argv.join(' ')).toContain('Não passe tokens na linha de comando')
+      expect(message).not.toMatch(/gh[po]_|github_pat_/)
+    }
+  })
 })
 
 describe('token da prévia', () => {
@@ -62,6 +95,23 @@ describe('token da prévia', () => {
       }),
     ).toBeNull()
     expect(resolveToken({}, () => '')).toBeNull()
+  })
+
+  it('token privado: CODORNA_TOKEN primeiro; vazio, usa o gh; sem nada, null', () => {
+    const gh = () => 'do-gh\n'
+    expect(resolvePrivateToken({ CODORNA_TOKEN: 'fino', GITHUB_TOKEN: 'outro' }, gh)).toEqual({
+      token: 'fino',
+      source: 'CODORNA_TOKEN',
+    })
+    expect(resolvePrivateToken({ CODORNA_TOKEN: ' ', GITHUB_TOKEN: 'outro' }, gh)).toEqual({
+      token: 'do-gh',
+      source: 'gh auth token',
+    })
+    expect(
+      resolvePrivateToken({ GITHUB_TOKEN: 'outro' }, () => {
+        throw new Error('gh não encontrado')
+      }),
+    ).toBeNull()
   })
 })
 
@@ -105,6 +155,48 @@ describe('prévia de ponta a ponta (API falsa)', () => {
     expect(readFileSync(join(cwd, 'preview', 'Pixel-Dev-light.svg'), 'utf8')).toContain(
       '42 private contributions',
     )
+  })
+
+  it('--private-token: modo completo sem nenhum nome privado nos arquivos nem na tela', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'codorna-preview-'))
+    const privateToken = 'github_pat_11PREVIEWsecreto_zzz'
+    const fake = fakeGitHub({ user: sampleUser(privateSample()), privateToken })
+    const lines: string[] = []
+    const { code, result } = await preview({
+      argv: ['--user', 'pixel-dev', '--private-token', '--private'],
+      env: { GITHUB_TOKEN: 'publico', CODORNA_TOKEN: privateToken },
+      cwd,
+      fetch: fake.fetch,
+      gh: () => '',
+      print: (line) => lines.push(line),
+      now: NOW,
+    })
+    expect(code).toBe(0)
+    expect(result?.character.activity.commits.privateRaw).toBe(34)
+    expect(lines).toContain(
+      'Token privado (modo completo, só leitura): CODORNA_TOKEN. Só totais aparecem: nenhum nome privado.',
+    )
+    const outputs = [
+      ...['Pixel-Dev-dark.svg', 'Pixel-Dev-light.svg', 'Pixel-Dev.json'].map((file) =>
+        readFileSync(join(cwd, 'preview', file), 'utf8'),
+      ),
+      ...lines,
+    ].join('\n')
+    for (const secret of SECRET_NAMES) expect(outputs, secret).not.toContain(secret)
+    expect(outputs).not.toContain(privateToken)
+    expect(readFileSync(join(cwd, 'preview', 'Pixel-Dev-dark.svg'), 'utf8')).toContain(
+      '45 contribuições privadas',
+    )
+    // O token privado só fez consultas privadas.
+    for (const call of fake.calls.filter((c) => c.token === privateToken)) {
+      expect(call.operation).toMatch(/^CodornaPrivate/)
+    }
+  })
+
+  it('--private-token sem CODORNA_TOKEN nem gh explica como configurar', async () => {
+    const { code, lines } = await run(['pixel-dev', '--private-token'], { GITHUB_TOKEN: 'x' })
+    expect(code).toBe(1)
+    expect(lines.join('\n')).toContain('$env:CODORNA_TOKEN')
   })
 
   it('sem login mostra o uso; sem token explica como configurar', async () => {
