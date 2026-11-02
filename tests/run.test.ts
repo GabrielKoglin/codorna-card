@@ -73,6 +73,35 @@ describe('Action de ponta a ponta (API falsa)', () => {
     expect(fake.calls.some((c) => c.method === 'PATCH')).toBe(true)
   })
 
+  it('private-contributions: soma as privadas, mostra no card e no resumo', async () => {
+    const ws = workspace({ 'private-contributions': 'true', commit: 'false', lang: 'en' })
+    const fake = fakeGitHub({
+      user: sampleUser({ restricted: [{ year: 2026, count: 1234 }] }),
+    })
+    const { logger } = memoryLogger()
+    const result = await run({ env: ws.env, logger, fetch: fake.fetch, now: NOW })
+    expect(result.character.activity.privateContributions).toEqual({ raw: 1234, counted: 1000 })
+    expect(result.character.xp.privateContributions).toBe(1000)
+    const svg = readFileSync(join(ws.dir, 'codorna-card.svg'), 'utf8')
+    expect(svg).toContain('1,234 private contributions')
+    expect(readFileSync(ws.summary, 'utf8')).toContain(
+      '| Private contributions (up to 1,000 per year) | 1,234 | 1,000 | 1,000 |',
+    )
+  })
+
+  it('sem a opção, o resumo não tem linha de privadas', async () => {
+    const ws = workspace({ commit: 'false' })
+    const fake = fakeGitHub({ user: sampleUser({ restricted: [{ year: 2026, count: 99 }] }) })
+    const result = await run({
+      env: ws.env,
+      logger: memoryLogger().logger,
+      fetch: fake.fetch,
+      now: NOW,
+    })
+    expect(result.character.xp.privateContributions).toBe(0)
+    expect(readFileSync(ws.summary, 'utf8')).not.toContain('privadas')
+  })
+
   it('commit: false só gera o arquivo', async () => {
     const ws = workspace({ commit: 'false', output: 'img/card.svg' })
     const fake = fakeGitHub({ user: sampleUser() })

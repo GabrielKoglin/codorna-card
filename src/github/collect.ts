@@ -25,6 +25,11 @@ export interface CollectOptions {
   warn?: (message: string) => void
   /** Páginas de 100 repositórios lidas no máximo (padrão 10 = 1.000 repositórios). */
   maxRepositoryPages?: number
+  /**
+   * Lê também o número de contribuições privadas que o GitHub mostra no perfil
+   * (`restrictedContributionsCount`, ano a ano). Padrão: false.
+   */
+  privateContributions?: boolean
 }
 
 /** Limite de repositórios por período que a API devolve em cada lista. */
@@ -140,10 +145,12 @@ async function collectYear(
   window: Window & { year: number },
 ): Promise<YearActivity> {
   const t = strings(options.lang)
+  const withPrivate = options.privateContributions === true
   const data = await options.client.graphql<YearResponse>(YEAR_QUERY, {
     login,
     from: window.from.toISOString(),
     to: window.to.toISOString(),
+    withPrivate,
   })
   const collection = data.user?.contributionsCollection
   if (!collection) throw new CodornaCardError('not-found', t.errors.userNotFound(login))
@@ -186,13 +193,20 @@ async function collectYear(
       options.warn?.(t.log.tooManyRepositories(periodLabel(window)))
   }
 
-  return {
+  const year: YearActivity = {
     year: window.year,
     commitsByDay: sortDays(commits.days),
     issues: publicCount(collection.issueContributionsByRepository),
     pullRequests: publicCount(collection.pullRequestContributionsByRepository),
     reviews: publicCount(collection.pullRequestReviewContributionsByRepository),
   }
+  if (withPrivate) {
+    const restricted = Number(collection.restrictedContributionsCount ?? 0)
+    year.privateContributions = Number.isFinite(restricted)
+      ? Math.max(0, Math.floor(restricted))
+      : 0
+  }
+  return year
 }
 
 /** Lê toda a atividade pública de uma pessoa pela API GraphQL. */
@@ -231,6 +245,12 @@ export async function collectPlayer(options: CollectOptions): Promise<PlayerData
   if (first && last) options.log?.(t.log.years(windows.length, first.year, last.year))
   const years: YearActivity[] = []
   for (const window of windows) years.push(await collectYear(options, login, window))
+
+  if (options.privateContributions) {
+    const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0)
+    if (total > 0) options.log?.(t.log.privateContributions(total))
+    else options.warn?.(t.log.noPrivateContributions)
+  }
 
   return {
     login,

@@ -19,6 +19,7 @@ describe('entradas', () => {
       theme: 'dark',
       lang: 'pt-BR',
       commit: true,
+      privateContributions: false,
     })
   })
 
@@ -30,6 +31,7 @@ describe('entradas', () => {
         lang: 'en-US',
         commit: 'False',
         output: './cards/meu.svg',
+        'private-contributions': 'TRUE',
       }),
     )
     expect(inputs).toMatchObject({
@@ -38,6 +40,7 @@ describe('entradas', () => {
       lang: 'en',
       commit: false,
       output: 'cards/meu.svg',
+      privateContributions: true,
     })
   })
 
@@ -46,6 +49,9 @@ describe('entradas', () => {
     expect(() => readInputs(env({ username: '-hifen' }))).toThrow('Username inválido')
     expect(() => readInputs(env({ theme: 'sepia', lang: 'en' }))).toThrow('Invalid theme: "sepia"')
     expect(() => readInputs(env({ commit: 'talvez' }))).toThrow('Valor inválido em commit')
+    expect(() => readInputs(env({ 'private-contributions': 'sim' }))).toThrow(
+      'Valor inválido em private-contributions: "sim"',
+    )
     expect(() => readInputs(env({ output: '../fora.svg' }))).toThrow('Saída inválida')
     expect(() => readInputs(env({ lang: 'fr' }))).toThrow(
       'Idioma inválido: "fr". Use pt-BR ou en. / Invalid language',

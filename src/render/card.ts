@@ -118,6 +118,51 @@ function steppedRect(x: number, y: number, w: number, h: number, step: number): 
 
 const CORNER_GEM = ['..##..', '.#gg#.', '#gwgg#', '#gggg#', '.#gg#.', '..##..']
 
+/** Um número do rodapé com o rótulo, ex.: ["1.612", "PRs mesclados"]. */
+export type StatItem = [value: string, label: string]
+
+/** Junta os itens do rodapé: "16.772 commits · 1.612 PRs mesclados". */
+export function statText(items: readonly StatItem[]): string {
+  return items.map(([value, label]) => `${value} ${label}`).join(' · ')
+}
+
+/** Largura do rodapé (px) e escala da fonte nele. */
+const FOOTER_WIDTH = CARD_WIDTH - 56
+const FOOTER_SCALE = 2
+
+/**
+ * Números do rodapé, do jeito mais completo que couber: rótulos longos; depois "PRs" no lugar de
+ * "PRs mesclados"; depois números compactos (16,7k); em último caso, menos itens. Issues ficam
+ * de fora (estão no resumo do job e na descrição acessível). As contribuições privadas só
+ * aparecem quando existem, o que exige `private-contributions: true`.
+ */
+export function footerStats(character: Character, lang: Lang, maxWidth = FOOTER_WIDTH): StatItem[] {
+  const t = strings(lang)
+  const activity = character.activity
+  const entries: [number, (n: number) => string, (n: number) => string][] = [
+    [activity.commits.raw, t.card.stats.commits, t.card.stats.commits],
+    [activity.merged.raw, t.card.stats.merged, t.card.stats.mergedShort],
+    [activity.reviews.raw, t.card.stats.reviews, t.card.stats.reviews],
+  ]
+  const privateCount = activity.privateContributions.raw
+  if (privateCount > 0) entries.push([privateCount, t.card.stats.private, t.card.stats.private])
+  const fits = (items: StatItem[]) => measure(statText(items)) * FOOTER_SCALE <= maxWidth
+  let items: StatItem[] = []
+  for (const [short, compact] of [
+    [false, false],
+    [true, false],
+    [true, true],
+  ] as const) {
+    items = entries.map(([count, long, shortLabel]) => [
+      compact ? t.card.compact(count) : formatNumber(count, lang),
+      (short ? shortLabel : long)(count),
+    ])
+    if (fits(items)) return items
+  }
+  while (items.length > 1 && !fits(items)) items = items.slice(0, -1)
+  return items
+}
+
 /** Ajusta um tamanho para a grade de 2 px, para manter tudo nítido. */
 function snap(value: number): number {
   return Math.round(value / 2) * 2
@@ -369,35 +414,24 @@ export function renderCard(character: Character, options: RenderOptions): string
     canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted })
   }
 
-  // Números públicos (issues ficam no resumo do job e na descrição acessível).
-  const counts = {
-    commits: character.activity.commits.raw,
-    merged: character.activity.merged.raw,
-    reviews: character.activity.reviews.raw,
-    issues: character.activity.issues.raw,
-  }
-  const statItems = (short: boolean): [string, string][] => [
-    [numberText(counts.commits), t.card.stats.commits(counts.commits)],
-    [
-      numberText(counts.merged),
-      (short ? t.card.stats.mergedShort : t.card.stats.merged)(counts.merged),
-    ],
-    [numberText(counts.reviews), t.card.stats.reviews(counts.reviews)],
-  ]
-  const statText = (items: [string, string][]) =>
-    items.map(([value, label]) => `${value} ${label}`).join(' · ')
-  const fullStats = statItems(false)
-  const shownStats = measure(statText(fullStats)) * 2 > bottomW ? statItems(true) : fullStats
+  // Números públicos (e as contribuições privadas, quando a opção está ligada).
   let sx = bottomX
-  shownStats.forEach(([value, label], i) => {
+  footerStats(character, options.lang, bottomW).forEach(([value, label], i) => {
     if (i > 0) sx += canvas.text(' · ', sx, 326, { fill: theme.muted })
     sx += canvas.text(value, sx, 326, { fill: theme.text })
     sx += canvas.text(` ${label}`, sx, 326, { fill: theme.muted })
   })
-  const descStats = statText([
-    ...fullStats,
-    [numberText(counts.issues), t.card.stats.issues(counts.issues)],
-  ])
+  const activity = character.activity
+  const descItems: StatItem[] = [
+    [numberText(activity.commits.raw), t.card.stats.commits(activity.commits.raw)],
+    [numberText(activity.merged.raw), t.card.stats.merged(activity.merged.raw)],
+    [numberText(activity.reviews.raw), t.card.stats.reviews(activity.reviews.raw)],
+    [numberText(activity.issues.raw), t.card.stats.issues(activity.issues.raw)],
+  ]
+  const privateCount = activity.privateContributions.raw
+  if (privateCount > 0)
+    descItems.push([numberText(privateCount), t.card.stats.privateLong(privateCount)])
+  const descStats = statText(descItems)
 
   const attributes = ATTRIBUTES.map(
     (def) => `${t.attributes[def.id].short} ${character.attributes[def.id]}`,

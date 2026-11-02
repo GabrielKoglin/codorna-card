@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { buildCharacter } from '../src/game/character'
 import { CLASSES } from '../src/game/classes'
 import { RANKS } from '../src/game/rules'
-import { strings } from '../src/i18n'
-import { renderCard } from '../src/render/card'
+import { compactNumber, strings } from '../src/i18n'
+import { footerStats, renderCard, statText } from '../src/render/card'
+import { measure } from '../src/render/font'
 import { contrast, ensureContrast } from '../src/render/color'
 import { RANK_METALS, THEMES } from '../src/render/theme'
 import type { Lang, PlayerData, ThemeName } from '../src/types'
@@ -115,6 +116,79 @@ describe('SVG do card', () => {
     expect(svg).toContain(strings('pt-BR').card.noLanguages)
     expect(svg).toContain('Nível 99 (Mítico)')
     expect(Buffer.byteLength(svg)).toBeLessThan(50 * 1024)
+  })
+})
+
+describe('rodapé', () => {
+  const withPrivate = (
+    privateContributions: number,
+    scale = 1,
+    name: (typeof FIXTURES)[number] = 'veterano',
+  ): PlayerData => {
+    const base = fixture(name)
+    return {
+      ...base,
+      years: base.years.map((year, i) => ({
+        ...year,
+        commitsByDay: Object.fromEntries(
+          Object.entries(year.commitsByDay).map(([day, n]) => [day, n * scale]),
+        ),
+        privateContributions: i === 0 ? privateContributions : 0,
+      })),
+      mergedPullRequests: base.mergedPullRequests * scale,
+    }
+  }
+
+  it('mostra só o número de privadas, rotulado nos dois idiomas', () => {
+    const character = buildCharacter(withPrivate(3456, 1, 'iniciante'))
+    expect(statText(footerStats(character, 'pt-BR'))).toBe(
+      '169 commits · 3 PRs mesclados · 1 review · 3.456 privadas',
+    )
+    expect(statText(footerStats(character, 'en'))).toBe(
+      '169 commits · 3 merged PRs · 1 review · 3,456 private',
+    )
+    const svg = renderCard(character, { theme: 'dark', lang: 'pt-BR' })
+    expect(svg).toContain('1 review · 3 issues · 3.456 contribuições privadas.')
+  })
+
+  it('encurta rótulos e números quando não cabe', () => {
+    const character = buildCharacter(withPrivate(3456))
+    expect(statText(footerStats(character, 'pt-BR'))).toBe(
+      '16,7k commits · 1.612 PRs · 2.494 reviews · 3.456 privadas',
+    )
+    expect(statText(footerStats(character, 'en'))).toBe(
+      '16.7k commits · 1,612 PRs · 2,494 reviews · 3,456 private',
+    )
+    const svg = renderCard(character, { theme: 'dark', lang: 'pt-BR' })
+    expect(svg).toContain('2.494 reviews · 512 issues · 3.456 contribuições privadas.')
+  })
+
+  it('sem privadas, o rodapé continua igual', () => {
+    const character = buildCharacter(fixture('veterano'))
+    expect(statText(footerStats(character, 'pt-BR'))).toBe(
+      '16.772 commits · 1.612 PRs mesclados · 2.494 reviews',
+    )
+  })
+
+  it('sempre cabe, mesmo com números enormes', () => {
+    for (const lang of LANGS) {
+      for (const scale of [1, 10, 100, 1000]) {
+        const character = buildCharacter(withPrivate(123_456_789, scale))
+        const text = statText(footerStats(character, lang))
+        expect(measure(text) * 2, text).toBeLessThanOrEqual(640 - 56)
+      }
+    }
+  })
+
+  it('números compactos cortam em vez de arredondar', () => {
+    expect(compactNumber(9_999, 'pt-BR')).toBe('9.999')
+    expect(compactNumber(16_772, 'pt-BR')).toBe('16,7k')
+    expect(compactNumber(16_772, 'en')).toBe('16.7k')
+    expect(compactNumber(99_999, 'en')).toBe('99.9k')
+    expect(compactNumber(100_000, 'en')).toBe('100k')
+    expect(compactNumber(10_000, 'en')).toBe('10k')
+    expect(compactNumber(1_250_000, 'pt-BR')).toBe('1,2M')
+    expect(compactNumber(123_456_789, 'en')).toBe('123M')
   })
 })
 

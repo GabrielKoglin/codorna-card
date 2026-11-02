@@ -538,6 +538,12 @@ const XP_RULES = {
     mergedPullRequest: { xp: 10 },
     /** Bônus de +10 XP quando o PR mesclado é no repositório de outra pessoa. */
     mergedElsewhereBonus: { xp: 10 },
+    /**
+     * Opcional (`private-contributions: true`): cada contribuição privada que o GitHub mostra no
+     * perfil vale 1 XP, até 1.000 por ano. Vale metade de um commit porque o número mistura todos
+     * os tipos, não passa pelo teto diário e ninguém de fora consegue conferir.
+     */
+    privateContribution: { xp: 1, yearlyCap: 1000 },
 };
 /** Nível máximo. */
 const MAX_LEVEL = 99;
@@ -576,6 +582,7 @@ function countActivity(data) {
     const issues = { raw: 0, counted: 0 };
     const pullRequests = { raw: 0, counted: 0 };
     const reviews = { raw: 0, counted: 0 };
+    const privateContributions = { raw: 0, counted: 0 };
     for (const year of data.years) {
         for (const [day, value] of Object.entries(year.commitsByDay)) {
             commitsByDay[day] = (commitsByDay[day] ?? 0) + whole(value);
@@ -589,6 +596,9 @@ function countActivity(data) {
         pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap);
         reviews.raw += yearReviews;
         reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap);
+        const yearPrivate = whole(year.privateContributions ?? 0);
+        privateContributions.raw += yearPrivate;
+        privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap);
     }
     const mergedRaw = whole(data.mergedPullRequests);
     const mergedCounted = Math.min(mergedRaw, pullRequests.counted);
@@ -600,6 +610,7 @@ function countActivity(data) {
         reviews,
         merged: { raw: mergedRaw, counted: mergedCounted },
         mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
+        privateContributions,
     };
 }
 function computeXp(activity) {
@@ -609,6 +620,7 @@ function computeXp(activity) {
     const reviews = activity.reviews.counted * XP_RULES.review.xp;
     const merged = activity.merged.counted * XP_RULES.mergedPullRequest.xp;
     const mergedElsewhere = activity.mergedElsewhere.counted * XP_RULES.mergedElsewhereBonus.xp;
+    const privateContributions = activity.privateContributions.counted * XP_RULES.privateContribution.xp;
     return {
         commits,
         issues,
@@ -616,7 +628,8 @@ function computeXp(activity) {
         reviews,
         merged,
         mergedElsewhere,
-        total: commits + issues + pullRequests + reviews + merged + mergedElsewhere,
+        privateContributions,
+        total: commits + issues + pullRequests + reviews + merged + mergedElsewhere + privateContributions,
     };
 }
 /** XP total necessário para chegar a um nível. */
@@ -703,6 +716,22 @@ function formatPercent(share) {
         return '<1%';
     return `${Math.round(percent)}%`;
 }
+/**
+ * Número curto para o rodapé: até 9.999 fica inteiro; depois vira 16,7k / 16.7k e 1,2M / 1.2M.
+ * Corta (não arredonda) para nunca mostrar mais do que a pessoa tem.
+ */
+function compactNumber(value, lang) {
+    const n = Math.max(0, Math.floor(value));
+    if (n < 10_000)
+        return formatNumber(n, lang);
+    const millions = n >= 1_000_000;
+    const suffix = millions ? 'M' : 'k';
+    const scaled = n / (millions ? 1_000_000 : 1_000);
+    const text = scaled < 100
+        ? (Math.floor(scaled * 10) / 10).toFixed(1).replace(/\.0$/, '')
+        : String(Math.floor(scaled));
+    return `${lang === 'pt-BR' ? text.replace('.', ',') : text}${suffix}`;
+}
 function utcTime(date) {
     return date.toISOString().slice(11, 16);
 }
@@ -722,7 +751,10 @@ const PT_BR = {
             mergedShort: (n) => (n === 1 ? 'PR' : 'PRs'),
             reviews: (n) => (n === 1 ? 'review' : 'reviews'),
             issues: (n) => (n === 1 ? 'issue' : 'issues'),
+            private: (n) => (n === 1 ? 'privada' : 'privadas'),
+            privateLong: (n) => (n === 1 ? 'contribuição privada' : 'contribuições privadas'),
         },
+        compact: (value) => compactNumber(value, 'pt-BR'),
     },
     attributes: {
         str: { short: 'FOR', name: 'Força' },
@@ -770,6 +802,8 @@ const PT_BR = {
         rateLimitLow: (remaining, resetAt) => `Atenção: restam ${remaining} pontos de API até ${utcTime(resetAt)} UTC.`,
         retrying: (attempt, seconds) => `Tentando de novo (tentativa ${attempt}) em ${seconds}s…`,
         result: (level, className, xp) => `Nível ${level} · ${className} · ${xp} XP`,
+        privateContributions: (total) => `Contribuições privadas informadas pelo GitHub: ${formatNumber(total, 'pt-BR')} (só o número, sem detalhes).`,
+        noPrivateContributions: 'private-contributions está ligado, mas o GitHub não informou nenhuma contribuição privada. Para o número aparecer, ligue "Private contributions" em "Contribution settings", no seu perfil do GitHub.',
         wrote: (path) => `Card salvo em ${path}`,
         committed: (sha, branch) => `Commit ${sha.slice(0, 7)} enviado para ${branch}.`,
         unchanged: 'O card não mudou; nada para comitar.',
@@ -818,6 +852,7 @@ const PT_BR = {
             reviews: 'Reviews de PR (até 250 por ano)',
             merged: 'PRs mesclados',
             mergedElsewhere: 'Bônus: mesclados em repositórios de outras pessoas',
+            privateContributions: 'Contribuições privadas (até 1.000 por ano)',
         },
         files: 'Arquivos',
         rules: 'Regras completas',
@@ -839,7 +874,10 @@ const EN = {
             mergedShort: (n) => (n === 1 ? 'PR' : 'PRs'),
             reviews: (n) => (n === 1 ? 'review' : 'reviews'),
             issues: (n) => (n === 1 ? 'issue' : 'issues'),
+            private: () => 'private',
+            privateLong: (n) => (n === 1 ? 'private contribution' : 'private contributions'),
         },
+        compact: (value) => compactNumber(value, 'en'),
     },
     attributes: {
         str: { short: 'STR', name: 'Strength' },
@@ -887,6 +925,8 @@ const EN = {
         rateLimitLow: (remaining, resetAt) => `Heads up: ${remaining} API points left until ${utcTime(resetAt)} UTC.`,
         retrying: (attempt, seconds) => `Retrying (attempt ${attempt}) in ${seconds}s…`,
         result: (level, className, xp) => `Level ${level} · ${className} · ${xp} XP`,
+        privateContributions: (total) => `Private contributions reported by GitHub: ${formatNumber(total, 'en')} (just the number, no details).`,
+        noPrivateContributions: 'private-contributions is on, but GitHub reported no private contributions. For the number to show up, turn on "Private contributions" in "Contribution settings" on your GitHub profile.',
         wrote: (path) => `Card saved to ${path}`,
         committed: (sha, branch) => `Commit ${sha.slice(0, 7)} pushed to ${branch}.`,
         unchanged: 'The card did not change; nothing to commit.',
@@ -935,6 +975,7 @@ const EN = {
             reviews: 'PR reviews (up to 250 per year)',
             merged: 'Merged PRs',
             mergedElsewhere: "Bonus: merged in other people's repositories",
+            privateContributions: 'Private contributions (up to 1,000 per year)',
         },
         files: 'Files',
         rules: 'Full rules',
@@ -1226,14 +1267,20 @@ const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
     }
   }
 `;
+/**
+ * Atividade de um ano. Com `$withPrivate`, pede também `restrictedContributionsCount`: o número
+ * de contribuições que quem consulta não consegue ver, que o GitHub só informa (diferente de zero)
+ * quando a pessoa liga "Private contributions" no perfil. É só um total, sem nenhum detalhe.
+ */
 const YEAR_QUERY = /* GraphQL */ `
-  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!) {
+  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!, $withPrivate: Boolean!) {
     rateLimit {
       remaining
       resetAt
     }
     user(login: $login) {
       contributionsCollection(from: $from, to: $to) {
+        restrictedContributionsCount @include(if: $withPrivate)
         ...CodornaCommitDays
         issueContributionsByRepository(maxRepositories: 100) {
           repository {
@@ -1372,10 +1419,12 @@ async function collectRepositories(options, login) {
 }
 async function collectYear(options, login, window) {
     const t = strings(options.lang);
+    const withPrivate = options.privateContributions === true;
     const data = await options.client.graphql(YEAR_QUERY, {
         login,
         from: window.from.toISOString(),
         to: window.to.toISOString(),
+        withPrivate,
     });
     const collection = data.user?.contributionsCollection;
     if (!collection)
@@ -1415,13 +1464,20 @@ async function collectYear(options, login, window) {
         if (list.length >= MAX_REPOSITORIES)
             options.warn?.(t.log.tooManyRepositories(periodLabel(window)));
     }
-    return {
+    const year = {
         year: window.year,
         commitsByDay: sortDays(commits.days),
         issues: publicCount(collection.issueContributionsByRepository),
         pullRequests: publicCount(collection.pullRequestContributionsByRepository),
         reviews: publicCount(collection.pullRequestReviewContributionsByRepository),
     };
+    if (withPrivate) {
+        const restricted = Number(collection.restrictedContributionsCount ?? 0);
+        year.privateContributions = Number.isFinite(restricted)
+            ? Math.max(0, Math.floor(restricted))
+            : 0;
+    }
+    return year;
 }
 /** Lê toda a atividade pública de uma pessoa pela API GraphQL. */
 async function collectPlayer(options) {
@@ -1460,6 +1516,13 @@ async function collectPlayer(options) {
     const years = [];
     for (const window of windows)
         years.push(await collectYear(options, login, window));
+    if (options.privateContributions) {
+        const total = years.reduce((sum, year) => sum + (year.privateContributions ?? 0), 0);
+        if (total > 0)
+            options.log?.(t.log.privateContributions(total));
+        else
+            options.warn?.(t.log.noPrivateContributions);
+    }
     return {
         login,
         createdAt: owner.createdAt,
@@ -1641,7 +1704,12 @@ function readInputs(env) {
     const commit = commitInput === '' ? true : parseBoolean(commitInput);
     if (commit === null)
         throw new CodornaCardError('input', t.errors.invalidBoolean('commit', commitInput));
-    return { username, token, output, theme: themeInput, lang, commit };
+    const privateInput = getInput(env, 'private-contributions');
+    const privateContributions = privateInput === '' ? false : parseBoolean(privateInput);
+    if (privateContributions === null) {
+        throw new CodornaCardError('input', t.errors.invalidBoolean('private-contributions', privateInput));
+    }
+    return { username, token, output, theme: themeInput, lang, commit, privateContributions };
 }
 
 ;// CONCATENATED MODULE: ./src/render/color.ts
@@ -2662,6 +2730,48 @@ function steppedRect(x, y, w, h, step) {
         `h-${w - 4 * s}v-${s}h-${s}v-${s}h-${s}v-${h - 4 * s}h${s}v-${s}h${s}z`);
 }
 const CORNER_GEM = ['..##..', '.#gg#.', '#gwgg#', '#gggg#', '.#gg#.', '..##..'];
+/** Junta os itens do rodapé: "16.772 commits · 1.612 PRs mesclados". */
+function statText(items) {
+    return items.map(([value, label]) => `${value} ${label}`).join(' · ');
+}
+/** Largura do rodapé (px) e escala da fonte nele. */
+const FOOTER_WIDTH = CARD_WIDTH - 56;
+const FOOTER_SCALE = 2;
+/**
+ * Números do rodapé, do jeito mais completo que couber: rótulos longos; depois "PRs" no lugar de
+ * "PRs mesclados"; depois números compactos (16,7k); em último caso, menos itens. Issues ficam
+ * de fora (estão no resumo do job e na descrição acessível). As contribuições privadas só
+ * aparecem quando existem, o que exige `private-contributions: true`.
+ */
+function footerStats(character, lang, maxWidth = FOOTER_WIDTH) {
+    const t = strings(lang);
+    const activity = character.activity;
+    const entries = [
+        [activity.commits.raw, t.card.stats.commits, t.card.stats.commits],
+        [activity.merged.raw, t.card.stats.merged, t.card.stats.mergedShort],
+        [activity.reviews.raw, t.card.stats.reviews, t.card.stats.reviews],
+    ];
+    const privateCount = activity.privateContributions.raw;
+    if (privateCount > 0)
+        entries.push([privateCount, t.card.stats.private, t.card.stats.private]);
+    const fits = (items) => measure(statText(items)) * FOOTER_SCALE <= maxWidth;
+    let items = [];
+    for (const [short, compact] of [
+        [false, false],
+        [true, false],
+        [true, true],
+    ]) {
+        items = entries.map(([count, long, shortLabel]) => [
+            compact ? t.card.compact(count) : formatNumber(count, lang),
+            (short ? shortLabel : long)(count),
+        ]);
+        if (fits(items))
+            return items;
+    }
+    while (items.length > 1 && !fits(items))
+        items = items.slice(0, -1);
+    return items;
+}
 /** Ajusta um tamanho para a grade de 2 px, para manter tudo nítido. */
 function snap(value) {
     return Math.round(value / 2) * 2;
@@ -2862,35 +2972,25 @@ function renderCard(character, options) {
     else {
         canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted });
     }
-    // Números públicos (issues ficam no resumo do job e na descrição acessível).
-    const counts = {
-        commits: character.activity.commits.raw,
-        merged: character.activity.merged.raw,
-        reviews: character.activity.reviews.raw,
-        issues: character.activity.issues.raw,
-    };
-    const statItems = (short) => [
-        [numberText(counts.commits), t.card.stats.commits(counts.commits)],
-        [
-            numberText(counts.merged),
-            (short ? t.card.stats.mergedShort : t.card.stats.merged)(counts.merged),
-        ],
-        [numberText(counts.reviews), t.card.stats.reviews(counts.reviews)],
-    ];
-    const statText = (items) => items.map(([value, label]) => `${value} ${label}`).join(' · ');
-    const fullStats = statItems(false);
-    const shownStats = measure(statText(fullStats)) * 2 > bottomW ? statItems(true) : fullStats;
+    // Números públicos (e as contribuições privadas, quando a opção está ligada).
     let sx = bottomX;
-    shownStats.forEach(([value, label], i) => {
+    footerStats(character, options.lang, bottomW).forEach(([value, label], i) => {
         if (i > 0)
             sx += canvas.text(' · ', sx, 326, { fill: theme.muted });
         sx += canvas.text(value, sx, 326, { fill: theme.text });
         sx += canvas.text(` ${label}`, sx, 326, { fill: theme.muted });
     });
-    const descStats = statText([
-        ...fullStats,
-        [numberText(counts.issues), t.card.stats.issues(counts.issues)],
-    ]);
+    const activity = character.activity;
+    const descItems = [
+        [numberText(activity.commits.raw), t.card.stats.commits(activity.commits.raw)],
+        [numberText(activity.merged.raw), t.card.stats.merged(activity.merged.raw)],
+        [numberText(activity.reviews.raw), t.card.stats.reviews(activity.reviews.raw)],
+        [numberText(activity.issues.raw), t.card.stats.issues(activity.issues.raw)],
+    ];
+    const privateCount = activity.privateContributions.raw;
+    if (privateCount > 0)
+        descItems.push([numberText(privateCount), t.card.stats.privateLong(privateCount)]);
+    const descStats = statText(descItems);
     const attributes = ATTRIBUTES.map((def) => `${t.attributes[def.id].short} ${character.attributes[def.id]}`).join(', ');
     const languages = character.languages
         .slice(0, 3)
@@ -2941,6 +3041,14 @@ function summaryMarkdown(character, inputs, files) {
             xp.mergedElsewhere,
         ],
     ];
+    if (inputs.privateContributions) {
+        rows.push([
+            t.summary.rows.privateContributions,
+            a.privateContributions.raw,
+            a.privateContributions.counted,
+            xp.privateContributions,
+        ]);
+    }
     return [
         `## ${t.summary.title(character.login)}`,
         '',
@@ -2978,6 +3086,7 @@ async function run(deps) {
         login: inputs.username,
         lang: inputs.lang,
         now: deps.now,
+        privateContributions: inputs.privateContributions,
         log: (message) => logger.info(message),
         warn: (message) => logger.warning(message),
     }));

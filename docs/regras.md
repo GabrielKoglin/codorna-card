@@ -5,7 +5,9 @@ está em [`src/game/`](../src/game), e toda mudança de regra precisa atualizar 
 
 Princípios:
 
-- **Só dados públicos.** Nada privado entra no cálculo, mesmo que o token consiga enxergar.
+- **Só dados públicos.** Nada privado entra no cálculo, mesmo que o token consiga enxergar. A
+  única exceção é opcional e desligada por padrão: com `private-contributions: true`, entra o
+  número de contribuições privadas que o GitHub já mostra no seu perfil (só o total, sem detalhes).
 - **Regras abertas.** Qualquer pessoa consegue refazer a conta do próprio card.
 - **Constância vale mais que volume.** Tetos diários e anuais impedem que farm vire nível.
 - **O card só muda quando os números mudam.** Não há data de atualização no SVG, então não
@@ -25,9 +27,10 @@ a criação da conta até o dia da execução.
 | PRs mesclados                                   | Busca `is:pr is:merged is:public author:LOGIN`, desde sempre.                                                                                                                                                              |
 | PRs mesclados em repositórios de outras pessoas | A mesma busca com `-user:LOGIN`.                                                                                                                                                                                           |
 | Linguagens                                      | Repositórios próprios, públicos e que não são fork (até os 1.000 com push mais recente), com as 10 maiores linguagens de cada um.                                                                                          |
+| Contribuições privadas (opcional)               | Só com `private-contributions: true`: o campo `restrictedContributionsCount` de cada ano, o mesmo total anônimo que o GitHub mostra no gráfico do perfil. Veja [Contribuições privadas](#contribuições-privadas-opcional). |
 
 Em todas as listas, repositórios marcados como privados são descartados. As "contribuições
-privadas" que o GitHub mostra de forma anônima no perfil também não entram.
+privadas" que o GitHub mostra de forma anônima no perfil só entram com `private-contributions: true`.
 
 Limites da API que vale conhecer: em cada período a API lista até 100 repositórios por tipo de
 contribuição. Quem contribui em mais de 100 repositórios no mesmo ano pode ter os menos ativos
@@ -43,6 +46,7 @@ de fora (a Action avisa no log quando isso acontece).
 | Review de PR                               |            8 | 250 por ano.                                                                   |
 | PR mesclado                                |          +10 | Nunca conta mais PRs mesclados do que PRs abertos contados.                    |
 | PR mesclado em repositório de outra pessoa | +10 de bônus | O mesmo limite acima.                                                          |
+| Contribuição privada (opcional)            |            1 | 1.000 por ano. Só com `private-contributions: true`.                           |
 
 Na prática:
 
@@ -58,6 +62,37 @@ escolhidos para quase nunca atrapalhar quem trabalha de verdade.
 O que **não** dá XP: estrelas, seguidores, repositórios criados (popularidade e quantidade de
 repositórios são fáceis de farmar) e os commits do próprio Codorna Card, que são feitos em nome
 do `github-actions[bot]` e por isso não contam como contribuição sua.
+
+## Contribuições privadas (opcional)
+
+Para quem trabalha quase só em repositórios privados. Fica desligado por padrão.
+
+**Como ligar.** Duas coisas:
+
+1. No workflow, `private-contributions: true`.
+2. No GitHub, no seu perfil: acima do gráfico de contribuições, **Contribution settings** →
+   **Private contributions**. Sem isso o GitHub não informa o número e a Action avisa no log.
+
+**O que entra.** O campo `restrictedContributionsCount` da API GraphQL, ano a ano. O GitHub o
+define como as contribuições que quem consulta não consegue acessar, e ele só é diferente de zero
+quando a pessoa escolheu compartilhar as contagens privadas. É o mesmo total anônimo que qualquer
+visitante já vê no gráfico do perfil. Nenhum nome, linguagem ou detalhe de repositório privado é
+lido; as listas por repositório continuam descartando tudo o que é privado.
+
+**Quanto vale.** 1 XP por contribuição, até 1.000 por ano. O número mistura commits, issues, PRs e
+reviews sem dizer o quê, não passa pelo teto diário de commits e ninguém de fora consegue conferir.
+Por isso vale metade de um commit público e tem teto anual: quem trabalha muito em privado ganha até
+1.000 XP por ano (o mesmo que 500 commits públicos), e farm num repositório privado não passa disso.
+
+**O que não muda.** Atributos, classe e linguagens continuam só com dados públicos.
+
+**No card.** O rodapé mostra só o total, como `3.456 privadas` (`3,456 private` em inglês), e a
+descrição acessível diz "3.456 contribuições privadas". O resumo do job mostra a conta.
+
+**Token.** O `GITHUB_TOKEN` padrão basta, porque o número é público. Um detalhe: as contribuições
+em repositórios privados que o token consegue ver deixam de ser "restritas" para ele (e esses
+repositórios são descartados). Por isso um token pessoal com acesso aos seus repositórios privados
+mostra um número menor. Use o padrão.
 
 ## Nível
 
@@ -147,3 +182,5 @@ Exemplos com curva 0,4 e referência 2.000: 10 PRs mesclados dão DES 12; 100 d�
 
 As regras fazem parte da versão da Action. Mudança que altera XP, nível ou classe de quem já
 usa sai numa versão major nova (por exemplo, de `v1` para `v2`), com nota explicando o motivo.
+Regras opcionais novas, desligadas por padrão (como `private-contributions`), não mudam o card de
+ninguém e podem sair numa versão minor.

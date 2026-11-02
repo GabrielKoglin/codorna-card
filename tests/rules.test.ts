@@ -96,6 +96,7 @@ describe('XP', () => {
       reviews: 4 * 8,
       merged: 2 * 10,
       mergedElsewhere: 1 * 10,
+      privateContributions: 0,
       total: 30 + 8 + 15 + 32 + 20 + 10,
     })
   })
@@ -108,6 +109,66 @@ describe('XP', () => {
 
   it('não gera XP sem atividade', () => {
     expect(computeXp(countActivity(player())).total).toBe(0)
+  })
+})
+
+describe('contribuições privadas (opcional)', () => {
+  it('valem 1 XP cada, até 1.000 por ano, e não mexem no resto', () => {
+    const data = player({
+      years: [
+        {
+          year: 2025,
+          commitsByDay: { '2025-02-01': 4 },
+          issues: 0,
+          pullRequests: 0,
+          reviews: 0,
+          privateContributions: 2500,
+        },
+        {
+          year: 2026,
+          commitsByDay: {},
+          issues: 0,
+          pullRequests: 0,
+          reviews: 0,
+          privateContributions: 300,
+        },
+      ],
+    })
+    const activity = countActivity(data)
+    expect(activity.privateContributions).toEqual({ raw: 2800, counted: 1000 + 300 })
+    expect(activity.commits.counted).toBe(4)
+    const xp = computeXp(activity)
+    expect(xp.privateContributions).toBe(1300 * XP_RULES.privateContribution.xp)
+    expect(xp.total).toBe(4 * 2 + 1300)
+  })
+
+  it('sem a opção (campo ausente) não somam nada', () => {
+    const activity = countActivity(
+      player({
+        years: [{ year: 2026, commitsByDay: {}, issues: 0, pullRequests: 0, reviews: 0 }],
+      }),
+    )
+    expect(activity.privateContributions).toEqual({ raw: 0, counted: 0 })
+    expect(computeXp(activity).privateContributions).toBe(0)
+  })
+
+  it('valem menos que um commit público e ignoram valores inválidos', () => {
+    expect(XP_RULES.privateContribution.xp).toBeLessThan(XP_RULES.commit.xp)
+    const activity = countActivity(
+      player({
+        years: [
+          {
+            year: 2026,
+            commitsByDay: {},
+            issues: 0,
+            pullRequests: 0,
+            reviews: 0,
+            privateContributions: -40,
+          },
+        ],
+      }),
+    )
+    expect(activity.privateContributions).toEqual({ raw: 0, counted: 0 })
   })
 })
 

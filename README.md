@@ -84,17 +84,38 @@ Os dois temas têm fundo próprio, então qualquer um deles também fica legíve
 
 ### Entradas
 
-| Entrada    | Padrão              | O que faz                                                                                                                      |
-| ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `username` | dono do repositório | Login do GitHub cuja atividade vira o card.                                                                                    |
-| `token`    | `GITHUB_TOKEN`      | Token para ler a API e comitar. O padrão basta; não precisa de token pessoal.                                                  |
-| `output`   | `codorna-card.svg`  | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                  |
-| `theme`    | `dark`              | `dark`, `light` ou `both`.                                                                                                     |
-| `lang`     | `pt-BR`             | Idioma do card, dos logs e da mensagem de commit: `pt-BR` ou `en`.                                                             |
-| `commit`   | `true`              | Comita o SVG no repositório onde o workflow roda. Com `false`, só grava o arquivo no workspace (para você usar em outro step). |
+| Entrada                 | Padrão              | O que faz                                                                                                                                         |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `username`              | dono do repositório | Login do GitHub cuja atividade vira o card.                                                                                                       |
+| `token`                 | `GITHUB_TOKEN`      | Token para ler a API e comitar. O padrão basta; não precisa de token pessoal.                                                                     |
+| `output`                | `codorna-card.svg`  | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                                     |
+| `theme`                 | `dark`              | `dark`, `light` ou `both`.                                                                                                                        |
+| `lang`                  | `pt-BR`             | Idioma do card, dos logs e da mensagem de commit: `pt-BR` ou `en`.                                                                                |
+| `commit`                | `true`              | Comita o SVG no repositório onde o workflow roda. Com `false`, só grava o arquivo no workspace (para você usar em outro step).                    |
+| `private-contributions` | `false`             | Soma ao XP o número de contribuições privadas que o GitHub mostra no seu perfil. Veja [Contribuições privadas](#contribuições-privadas-opcional). |
 
 Saídas: `level`, `xp`, `class`, `class-name`, `rank`, `files` e `committed`. O resumo do job
 mostra a conta do XP linha por linha.
+
+### Contribuições privadas (opcional)
+
+Quase todo o seu trabalho está em repositórios privados? Ligue `private-contributions`:
+
+```yaml
+- uses: GabrielKoglin/codorna-card@v1
+  with:
+    private-contributions: true
+```
+
+A Action passa a somar o número de contribuições privadas que o GitHub já mostra no gráfico do seu
+perfil: 1 XP cada, até 1.000 por ano. Só o número entra. Nenhum nome, linguagem ou detalhe de
+repositório privado é lido, e o card mostra só o total, como "3.456 privadas".
+
+O número só aparece se você tiver ligado essa opção no próprio GitHub: no seu perfil, acima do
+gráfico de contribuições, clique em **Contribution settings** e marque **Private contributions**.
+Sem isso o GitHub informa zero e a Action avisa no log. Como o número é público, o `GITHUB_TOKEN`
+padrão basta para lê-lo; um token pessoal com acesso aos seus repositórios privados mostraria um
+número menor, porque o GitHub só conta como privadas as contribuições que o token não enxerga.
 
 ### Regras (resumo)
 
@@ -106,6 +127,7 @@ mostra a conta do XP linha por linha.
 | Review de PR                               |            8 | 250 por ano                          |
 | PR mesclado                                |          +10 | até o número de PRs abertos contados |
 | PR mesclado no repositório de outra pessoa | +10 de bônus | idem                                 |
+| Contribuição privada (opcional)            |            1 | 1.000 por ano                        |
 
 - **Nível:** chegar ao nível N custa 50 × (N − 1)² XP, até o 99.
 - **Patente:** Recruta, Aprendiz, Veterano, Mestre, Lenda e Mítico. A moldura muda de madeira
@@ -123,8 +145,9 @@ Tudo em detalhes, com as fórmulas: [`docs/regras.md`](docs/regras.md).
 
 ### Perguntas frequentes
 
-**Usa dados privados?** Não. Repositórios privados são descartados mesmo que o token consiga
-vê-los, e as contribuições privadas anônimas do perfil não entram.
+**Usa dados privados?** Por padrão, não. Repositórios privados são descartados mesmo que o token
+consiga vê-los. Com `private-contributions: true`, entra só o número de contribuições privadas que
+o GitHub já mostra publicamente no seu perfil, sem nenhum detalhe.
 
 **Preciso criar um token pessoal?** Não. O `GITHUB_TOKEN` do próprio workflow lê os dados
 públicos e comita o card. Só precisa de `permissions: contents: write` (já está no exemplo).
@@ -133,8 +156,9 @@ públicos e comita o card. Só precisa de `permissions: contents: write` (já es
 `github-actions[bot]` e só acontece quando o card muda.
 
 **Por que meus números não batem com o gráfico do perfil?** O gráfico pode incluir
-contribuições privadas e não tem tetos. O card usa só o que é público e aplica os tetos contra
-farm. O total público de cada tipo aparece no resumo do job.
+contribuições privadas e não tem tetos. O card usa só o que é público (e, se você ligar
+`private-contributions`, o total de privadas) e aplica os tetos contra farm. O total de cada tipo
+aparece no resumo do job.
 
 **Posso usar em uma organização?** O card é de pessoas. Em um repositório de organização,
 informe o seu login em `username`.
@@ -226,17 +250,39 @@ Both themes have their own background, so either one is also readable on its own
 
 ### Inputs
 
-| Input      | Default            | What it does                                                                                                                              |
-| ---------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `username` | repository owner   | GitHub login whose activity becomes the card.                                                                                             |
-| `token`    | `GITHUB_TOKEN`     | Token to read the API and commit. The default is enough; no personal token needed.                                                        |
-| `output`   | `codorna-card.svg` | SVG path in the repository. With `theme: both` it becomes `<name>-dark.svg` and `<name>-light.svg`.                                       |
-| `theme`    | `dark`             | `dark`, `light` or `both`.                                                                                                                |
-| `lang`     | `pt-BR`            | Language of the card, logs and commit message: `pt-BR` or `en`.                                                                           |
-| `commit`   | `true`             | Commits the SVG to the repository running the workflow. With `false`, it only writes the file to the workspace (for another step to use). |
+| Input                   | Default            | What it does                                                                                                                                    |
+| ----------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `username`              | repository owner   | GitHub login whose activity becomes the card.                                                                                                   |
+| `token`                 | `GITHUB_TOKEN`     | Token to read the API and commit. The default is enough; no personal token needed.                                                              |
+| `output`                | `codorna-card.svg` | SVG path in the repository. With `theme: both` it becomes `<name>-dark.svg` and `<name>-light.svg`.                                             |
+| `theme`                 | `dark`             | `dark`, `light` or `both`.                                                                                                                      |
+| `lang`                  | `pt-BR`            | Language of the card, logs and commit message: `pt-BR` or `en`.                                                                                 |
+| `commit`                | `true`             | Commits the SVG to the repository running the workflow. With `false`, it only writes the file to the workspace (for another step to use).       |
+| `private-contributions` | `false`            | Adds to your XP the number of private contributions GitHub shows on your profile. See [Private contributions](#private-contributions-optional). |
 
 Outputs: `level`, `xp`, `class`, `class-name`, `rank`, `files` and `committed`. The job summary
 shows the XP math line by line.
+
+### Private contributions (optional)
+
+Is almost all of your work in private repositories? Turn on `private-contributions`:
+
+```yaml
+- uses: GabrielKoglin/codorna-card@v1
+  with:
+    private-contributions: true
+```
+
+The Action then adds the number of private contributions GitHub already shows on your profile
+graph: 1 XP each, up to 1,000 per year. Only the number is used. No private repository name,
+language or detail is read, and the card only shows the total, like "3,456 private".
+
+The number only shows up if you turned this option on in GitHub itself: on your profile, above the
+contribution graph, click **Contribution settings** and check **Private contributions**. Without
+it GitHub reports zero and the Action warns you in the log. Since the number is public, the default
+`GITHUB_TOKEN` is enough to read it; a personal token with access to your private repositories
+would show a smaller number, because GitHub only counts as private the contributions the token
+cannot see.
 
 ### Rules (summary)
 
@@ -248,6 +294,7 @@ shows the XP math line by line.
 | PR review                              |         8 | 250 per year                           |
 | Merged PR                              |       +10 | up to the number of counted opened PRs |
 | PR merged in someone else's repository | +10 bonus | same                                   |
+| Private contribution (optional)        |         1 | 1,000 per year                         |
 
 - **Level:** reaching level N costs 50 × (N − 1)² XP, up to 99.
 - **Rank:** Recruit, Apprentice, Veteran, Master, Legend and Mythic. The frame goes from wood to
@@ -265,8 +312,9 @@ Full details and formulas (in Portuguese): [`docs/regras.md`](docs/regras.md).
 
 ### FAQ
 
-**Does it use private data?** No. Private repositories are dropped even if the token can see
-them, and the anonymous private contributions on your profile are not counted.
+**Does it use private data?** Not by default. Private repositories are dropped even if the token
+can see them. With `private-contributions: true`, only the number of private contributions GitHub
+already shows publicly on your profile is added, with no details.
 
 **Do I need a personal token?** No. The workflow's own `GITHUB_TOKEN` reads public data and
 commits the card. It only needs `permissions: contents: write` (already in the example).
@@ -275,8 +323,9 @@ commits the card. It only needs `permissions: contents: write` (already in the e
 `github-actions[bot]` and only happens when the card changes.
 
 **Why don't my numbers match my profile graph?** The graph may include private contributions
-and has no caps. The card only uses public data and applies the anti-farm caps. The job summary
-shows the public total of each type.
+and has no caps. The card only uses public data (plus the private total, if you turn on
+`private-contributions`) and applies the anti-farm caps. The job summary shows the total of each
+type.
 
 **Can I use it for an organization?** Cards are for people. In an organization repository, set
 your own login in `username`.

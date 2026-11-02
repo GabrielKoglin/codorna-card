@@ -13,6 +13,8 @@ export interface Inputs {
   theme: ThemeInput
   lang: Lang
   commit: boolean
+  /** Soma ao XP o número de contribuições privadas que o GitHub mostra no perfil. */
+  privateContributions: boolean
 }
 
 const LOGIN_PATTERN = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i
@@ -90,5 +92,14 @@ export function readInputs(env: Env): Inputs {
   if (commit === null)
     throw new CodornaCardError('input', t.errors.invalidBoolean('commit', commitInput))
 
-  return { username, token, output, theme: themeInput, lang, commit }
+  const privateInput = getInput(env, 'private-contributions')
+  const privateContributions = privateInput === '' ? false : parseBoolean(privateInput)
+  if (privateContributions === null) {
+    throw new CodornaCardError(
+      'input',
+      t.errors.invalidBoolean('private-contributions', privateInput),
+    )
+  }
+
+  return { username, token, output, theme: themeInput, lang, commit, privateContributions }
 }

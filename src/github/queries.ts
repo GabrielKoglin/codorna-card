@@ -79,14 +79,20 @@ const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
   }
 `
 
+/**
+ * Atividade de um ano. Com `$withPrivate`, pede também `restrictedContributionsCount`: o número
+ * de contribuições que quem consulta não consegue ver, que o GitHub só informa (diferente de zero)
+ * quando a pessoa liga "Private contributions" no perfil. É só um total, sem nenhum detalhe.
+ */
 export const YEAR_QUERY = /* GraphQL */ `
-  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!) {
+  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!, $withPrivate: Boolean!) {
     rateLimit {
       remaining
       resetAt
     }
     user(login: $login) {
       contributionsCollection(from: $from, to: $to) {
+        restrictedContributionsCount @include(if: $withPrivate)
         ...CodornaCommitDays
         issueContributionsByRepository(maxRepositories: 100) {
           repository {
@@ -180,6 +186,8 @@ export interface RepositoriesResponse {
 export interface YearResponse {
   user: {
     contributionsCollection: {
+      /** Só vem quando `$withPrivate` é true. */
+      restrictedContributionsCount?: number
       commitContributionsByRepository: CommitDaysByRepository[]
       issueContributionsByRepository: CountByRepository[]
       pullRequestContributionsByRepository: CountByRepository[]

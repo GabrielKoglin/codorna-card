@@ -6,7 +6,11 @@ import { fakeGitHub, sampleUser, type FakeUser } from './helpers/fake-github'
 
 const NOW = new Date('2026-11-02T12:00:00Z')
 
-async function collect(user: FakeUser | null, login = 'pixel-dev') {
+async function collect(
+  user: FakeUser | null,
+  login = 'pixel-dev',
+  extra: { privateContributions?: boolean } = {},
+) {
   const fake = fakeGitHub({ user })
   const client = new GitHubClient({
     token: 'x',
@@ -15,14 +19,17 @@ async function collect(user: FakeUser | null, login = 'pixel-dev') {
     sleep: async () => {},
   })
   const warnings: string[] = []
+  const logs: string[] = []
   const data = await collectPlayer({
     client,
     login,
     lang: 'pt-BR',
     now: NOW,
+    log: (m) => logs.push(m),
     warn: (m) => warnings.push(m),
+    ...extra,
   })
-  return { data, calls: fake.calls, warnings }
+  return { data, calls: fake.calls, warnings, logs }
 }
 
 describe('janelas de tempo', () => {
@@ -75,6 +82,56 @@ describe('coleta', () => {
       'is:pr is:merged is:public author:pixel-dev -user:pixel-dev',
     )
     expect(calls.some((c) => c.operation === 'CodornaQuarters')).toBe(false)
+  })
+
+  it('por padrão não pede contribuições privadas', async () => {
+    const { data, calls } = await collect(sampleUser({ restricted: [{ year: 2025, count: 120 }] }))
+    const years = calls.filter((c) => c.operation === 'CodornaYear')
+    expect(years).toHaveLength(3)
+    for (const call of years) {
+      expect((call.body as { variables: Record<string, unknown> }).variables.withPrivate).toBe(
+        false,
+      )
+    }
+    expect(data.years.every((y) => !('privateContributions' in y))).toBe(true)
+  })
+
+  it('com private-contributions lê só o número que o GitHub mostra no perfil', async () => {
+    const { data, calls, logs } = await collect(
+      sampleUser({
+        restricted: [
+          { year: 2025, count: 120 },
+          { year: 2026, count: 1500 },
+        ],
+      }),
+      'pixel-dev',
+      { privateContributions: true },
+    )
+    const query = calls.find((c) => c.operation === 'CodornaYear')?.body as {
+      query: string
+      variables: Record<string, unknown>
+    }
+    expect(query.variables.withPrivate).toBe(true)
+    expect(query.query).toContain('restrictedContributionsCount @include(if: $withPrivate)')
+    expect(data.years.map((y) => y.privateContributions)).toEqual([0, 120, 1500])
+    // Repositórios privados continuam fora de tudo: nem commits, nem issues, nem linguagens.
+    const y2025 = data.years.find((y) => y.year === 2025)
+    expect(y2025?.commitsByDay).toEqual({ '2025-01-15': 4 })
+    expect(y2025?.issues).toBe(0)
+    expect(data.repositories.map((r) => r.name)).toEqual(['forja', 'site'])
+    expect(JSON.stringify(data)).not.toContain('segredo')
+    expect(JSON.stringify(data)).not.toContain('privado')
+    expect(logs).toContain(
+      'Contribuições privadas informadas pelo GitHub: 1.620 (só o número, sem detalhes).',
+    )
+  })
+
+  it('avisa quando a opção está ligada mas o perfil não mostra privadas', async () => {
+    const { data, warnings } = await collect(sampleUser(), 'pixel-dev', {
+      privateContributions: true,
+    })
+    expect(data.years.map((y) => y.privateContributions)).toEqual([0, 0, 0])
+    expect(warnings.some((w) => w.includes('"Private contributions"'))).toBe(true)
   })
 
   it('relê por trimestre quando um repositório passa de 100 dias de commit no ano', async () => {

@@ -29,6 +29,11 @@ export interface YearActivity {
   pullRequests: number
   /** Reviews de pull request em repositórios públicos (um por PR revisado). */
   reviews: number
+  /**
+   * Contribuições privadas do ano, como o GitHub mostra no perfil (`restrictedContributionsCount`).
+   * Só existe com `private-contributions: true`. É só um número: nada de repositório privado.
+   */
+  privateContributions?: number
 }
 
 /**

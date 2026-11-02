@@ -27,3 +27,4 @@ jobs:
         #   lang: en             # pt-BR | en
         #   output: codorna-card.svg
         #   username: outro-login
+        #   private-contributions: true  # soma o total de privadas do perfil / adds your private total

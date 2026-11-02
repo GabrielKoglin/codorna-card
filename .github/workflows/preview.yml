@@ -12,6 +12,10 @@ on:
         description: pt-BR ou en
         required: false
         default: pt-BR
+      private-contributions:
+        description: Somar o total de contribuições privadas do perfil
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,6 +34,7 @@ jobs:
           lang: ${{ inputs.lang }}
           theme: both
           commit: false
+          private-contributions: ${{ inputs.private-contributions }}
 
       - name: Resultado
         env:

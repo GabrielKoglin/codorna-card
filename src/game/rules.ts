@@ -17,6 +17,12 @@ export const XP_RULES = {
   mergedPullRequest: { xp: 10 },
   /** Bônus de +10 XP quando o PR mesclado é no repositório de outra pessoa. */
   mergedElsewhereBonus: { xp: 10 },
+  /**
+   * Opcional (`private-contributions: true`): cada contribuição privada que o GitHub mostra no
+   * perfil vale 1 XP, até 1.000 por ano. Vale metade de um commit porque o número mistura todos
+   * os tipos, não passa pelo teto diário e ninguém de fora consegue conferir.
+   */
+  privateContribution: { xp: 1, yearlyCap: 1000 },
 } as const
 
 /** Nível máximo. */
@@ -47,6 +53,8 @@ export interface CountedActivity {
   reviews: Counted
   merged: Counted
   mergedElsewhere: Counted
+  /** Contribuições privadas (zero quando a opção está desligada). */
+  privateContributions: Counted
 }
 
 export interface XpBreakdown {
@@ -56,6 +64,7 @@ export interface XpBreakdown {
   reviews: number
   merged: number
   mergedElsewhere: number
+  privateContributions: number
   total: number
 }
 
@@ -110,6 +119,7 @@ export function countActivity(data: PlayerData): CountedActivity {
   const issues: Counted = { raw: 0, counted: 0 }
   const pullRequests: Counted = { raw: 0, counted: 0 }
   const reviews: Counted = { raw: 0, counted: 0 }
+  const privateContributions: Counted = { raw: 0, counted: 0 }
 
   for (const year of data.years) {
     for (const [day, value] of Object.entries(year.commitsByDay)) {
@@ -124,6 +134,9 @@ export function countActivity(data: PlayerData): CountedActivity {
     pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap)
     reviews.raw += yearReviews
     reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap)
+    const yearPrivate = whole(year.privateContributions ?? 0)
+    privateContributions.raw += yearPrivate
+    privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap)
   }
 
   const mergedRaw = whole(data.mergedPullRequests)
@@ -137,6 +150,7 @@ export function countActivity(data: PlayerData): CountedActivity {
     reviews,
     merged: { raw: mergedRaw, counted: mergedCounted },
     mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
+    privateContributions,
   }
 }
 
@@ -147,6 +161,8 @@ export function computeXp(activity: CountedActivity): XpBreakdown {
   const reviews = activity.reviews.counted * XP_RULES.review.xp
   const merged = activity.merged.counted * XP_RULES.mergedPullRequest.xp
   const mergedElsewhere = activity.mergedElsewhere.counted * XP_RULES.mergedElsewhereBonus.xp
+  const privateContributions =
+    activity.privateContributions.counted * XP_RULES.privateContribution.xp
   return {
     commits,
     issues,
@@ -154,7 +170,9 @@ export function computeXp(activity: CountedActivity): XpBreakdown {
     reviews,
     merged,
     mergedElsewhere,
-    total: commits + issues + pullRequests + reviews + merged + mergedElsewhere,
+    privateContributions,
+    total:
+      commits + issues + pullRequests + reviews + merged + mergedElsewhere + privateContributions,
   }
 }
 

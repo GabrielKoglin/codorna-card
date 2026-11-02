@@ -34,6 +34,11 @@ export interface FakeUser {
   issues?: FakeYearly[]
   pullRequests?: FakeYearly[]
   reviews?: FakeYearly[]
+  /**
+   * Contribuições privadas por ano, como o GitHub informa em `restrictedContributionsCount`
+   * (zero quando a pessoa não liga "Private contributions" no perfil).
+   */
+  restricted?: { year: number; count: number }[]
 }
 
 export interface FakeFile {
@@ -164,11 +169,18 @@ export function fakeGitHub(options: FakeOptions) {
         }
         case 'CodornaYear': {
           if (!user) return json(200, { data: { rateLimit: RATE, user: null } })
+          // Como o @include(if: $withPrivate) da consulta: o campo só vem quando pedido.
+          const withPrivate = (body.variables as Record<string, unknown>).withPrivate === true
+          const year = new Date(vars.from!).getUTCFullYear()
+          const restricted = (user.restricted ?? [])
+            .filter((entry) => entry.year === year)
+            .reduce((sum, entry) => sum + entry.count, 0)
           return json(200, {
             data: {
               rateLimit: RATE,
               user: {
                 contributionsCollection: {
+                  ...(withPrivate ? { restrictedContributionsCount: restricted } : {}),
                   commitContributionsByRepository: commitList(user, vars.from!, vars.to!),
                   issueContributionsByRepository: yearlyList(user.issues, vars.from!),
                   pullRequestContributionsByRepository: yearlyList(user.pullRequests, vars.from!),

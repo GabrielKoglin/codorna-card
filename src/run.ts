@@ -47,6 +47,14 @@ function summaryMarkdown(character: Character, inputs: Inputs, files: string[]):
       xp.mergedElsewhere,
     ],
   ]
+  if (inputs.privateContributions) {
+    rows.push([
+      t.summary.rows.privateContributions,
+      a.privateContributions.raw,
+      a.privateContributions.counted,
+      xp.privateContributions,
+    ])
+  }
   return [
     `## ${t.summary.title(character.login)}`,
     '',
@@ -90,6 +98,7 @@ export async function run(deps: RunDependencies): Promise<RunResult> {
       login: inputs.username,
       lang: inputs.lang,
       now: deps.now,
+      privateContributions: inputs.privateContributions,
       log: (message) => logger.info(message),
       warn: (message) => logger.warning(message),
     }),

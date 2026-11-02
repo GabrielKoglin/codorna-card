@@ -30,6 +30,10 @@ inputs:
     description: 'true para comitar o SVG no repositório onde o workflow roda (precisa de permissions contents write).'
     required: false
     default: 'true'
+  private-contributions:
+    description: 'true para somar ao XP o número de contribuições privadas que o GitHub mostra no seu perfil (ligue "Private contributions" em Contribution settings). Só o total entra; nada de repositório privado é lido.'
+    required: false
+    default: 'false'
 
 outputs:
   level:

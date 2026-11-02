@@ -16,6 +16,23 @@ function formatPercent(share: number): string {
   return `${Math.round(percent)}%`
 }
 
+/**
+ * Número curto para o rodapé: até 9.999 fica inteiro; depois vira 16,7k / 16.7k e 1,2M / 1.2M.
+ * Corta (não arredonda) para nunca mostrar mais do que a pessoa tem.
+ */
+export function compactNumber(value: number, lang: Lang): string {
+  const n = Math.max(0, Math.floor(value))
+  if (n < 10_000) return formatNumber(n, lang)
+  const millions = n >= 1_000_000
+  const suffix = millions ? 'M' : 'k'
+  const scaled = n / (millions ? 1_000_000 : 1_000)
+  const text =
+    scaled < 100
+      ? (Math.floor(scaled * 10) / 10).toFixed(1).replace(/\.0$/, '')
+      : String(Math.floor(scaled))
+  return `${lang === 'pt-BR' ? text.replace('.', ',') : text}${suffix}`
+}
+
 function utcTime(date: Date): string {
   return date.toISOString().slice(11, 16)
 }
@@ -31,9 +48,11 @@ export interface Strings {
     toNext: (xp: string) => string
     maxLevel: string
     stats: Record<
-      'commits' | 'merged' | 'mergedShort' | 'reviews' | 'issues',
+      'commits' | 'merged' | 'mergedShort' | 'reviews' | 'issues' | 'private' | 'privateLong',
       (count: number) => string
     >
+    /** Número compacto para o rodapé quando o texto não cabe (ex.: 16,7k). */
+    compact: (value: number) => string
   }
   attributes: Record<AttributeId, { short: string; name: string }>
   classes: Record<ClassId, string>
@@ -61,6 +80,8 @@ export interface Strings {
     rateLimitLow: (remaining: number, resetAt: Date) => string
     retrying: (attempt: number, seconds: number) => string
     result: (level: number, className: string, xp: string) => string
+    privateContributions: (total: number) => string
+    noPrivateContributions: string
     wrote: (path: string) => string
     committed: (sha: string, branch: string) => string
     unchanged: string
@@ -107,6 +128,7 @@ export interface Strings {
       reviews: string
       merged: string
       mergedElsewhere: string
+      privateContributions: string
     }
     files: string
     rules: string
@@ -129,7 +151,10 @@ const PT_BR: Strings = {
       mergedShort: (n) => (n === 1 ? 'PR' : 'PRs'),
       reviews: (n) => (n === 1 ? 'review' : 'reviews'),
       issues: (n) => (n === 1 ? 'issue' : 'issues'),
+      private: (n) => (n === 1 ? 'privada' : 'privadas'),
+      privateLong: (n) => (n === 1 ? 'contribuição privada' : 'contribuições privadas'),
     },
+    compact: (value) => compactNumber(value, 'pt-BR'),
   },
   attributes: {
     str: { short: 'FOR', name: 'Força' },
@@ -183,6 +208,10 @@ const PT_BR: Strings = {
       `Atenção: restam ${remaining} pontos de API até ${utcTime(resetAt)} UTC.`,
     retrying: (attempt, seconds) => `Tentando de novo (tentativa ${attempt}) em ${seconds}s…`,
     result: (level, className, xp) => `Nível ${level} · ${className} · ${xp} XP`,
+    privateContributions: (total) =>
+      `Contribuições privadas informadas pelo GitHub: ${formatNumber(total, 'pt-BR')} (só o número, sem detalhes).`,
+    noPrivateContributions:
+      'private-contributions está ligado, mas o GitHub não informou nenhuma contribuição privada. Para o número aparecer, ligue "Private contributions" em "Contribution settings", no seu perfil do GitHub.',
     wrote: (path) => `Card salvo em ${path}`,
     committed: (sha, branch) => `Commit ${sha.slice(0, 7)} enviado para ${branch}.`,
     unchanged: 'O card não mudou; nada para comitar.',
@@ -241,6 +270,7 @@ const PT_BR: Strings = {
       reviews: 'Reviews de PR (até 250 por ano)',
       merged: 'PRs mesclados',
       mergedElsewhere: 'Bônus: mesclados em repositórios de outras pessoas',
+      privateContributions: 'Contribuições privadas (até 1.000 por ano)',
     },
     files: 'Arquivos',
     rules: 'Regras completas',
@@ -263,7 +293,10 @@ const EN: Strings = {
       mergedShort: (n) => (n === 1 ? 'PR' : 'PRs'),
       reviews: (n) => (n === 1 ? 'review' : 'reviews'),
       issues: (n) => (n === 1 ? 'issue' : 'issues'),
+      private: () => 'private',
+      privateLong: (n) => (n === 1 ? 'private contribution' : 'private contributions'),
     },
+    compact: (value) => compactNumber(value, 'en'),
   },
   attributes: {
     str: { short: 'STR', name: 'Strength' },
@@ -316,6 +349,10 @@ const EN: Strings = {
       `Heads up: ${remaining} API points left until ${utcTime(resetAt)} UTC.`,
     retrying: (attempt, seconds) => `Retrying (attempt ${attempt}) in ${seconds}s…`,
     result: (level, className, xp) => `Level ${level} · ${className} · ${xp} XP`,
+    privateContributions: (total) =>
+      `Private contributions reported by GitHub: ${formatNumber(total, 'en')} (just the number, no details).`,
+    noPrivateContributions:
+      'private-contributions is on, but GitHub reported no private contributions. For the number to show up, turn on "Private contributions" in "Contribution settings" on your GitHub profile.',
     wrote: (path) => `Card saved to ${path}`,
     committed: (sha, branch) => `Commit ${sha.slice(0, 7)} pushed to ${branch}.`,
     unchanged: 'The card did not change; nothing to commit.',
@@ -374,6 +411,7 @@ const EN: Strings = {
       reviews: 'PR reviews (up to 250 per year)',
       merged: 'Merged PRs',
       mergedElsewhere: "Bonus: merged in other people's repositories",
+      privateContributions: 'Private contributions (up to 1,000 per year)',
     },
     files: 'Files',
     rules: 'Full rules',
