@@ -251,3 +251,12 @@ describe('legibilidade nos dois temas', () => {
     })
   }
 })
+
+describe('XP que falta para o próximo nível', () => {
+  it('concorda em número no pt-BR e fica igual no inglês', () => {
+    expect(strings('pt-BR').card.toNext('1')).toBe('falta 1 XP')
+    expect(strings('pt-BR').card.toNext('2')).toBe('faltam 2 XP')
+    expect(strings('pt-BR').card.toNext('1.250')).toBe('faltam 1.250 XP')
+    expect(strings('en').card.toNext('1')).toBe('1 XP to go')
+  })
+})

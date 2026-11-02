@@ -856,7 +856,7 @@ const PT_BR = {
         since: (year) => `desde ${year}`,
         noLanguages: 'nenhuma linguagem pública ainda',
         percent: formatPercent,
-        toNext: (xp) => `faltam ${xp} XP`,
+        toNext: (xp) => (xp === '1' ? `falta ${xp} XP` : `faltam ${xp} XP`),
         maxLevel: 'nível máximo!',
         stats: {
             commits: (n) => (n === 1 ? 'commit' : 'commits'),
