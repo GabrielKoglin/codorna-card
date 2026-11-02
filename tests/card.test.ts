@@ -84,9 +84,9 @@ describe('SVG do card', () => {
     const character = buildCharacter(fixture('veterano'))
     const pt = renderCard(character, { theme: 'dark', lang: 'pt-BR' })
     const en = renderCard(character, { theme: 'dark', lang: 'en' })
-    expect(pt).toContain('Guild Card de @demo-veterano')
+    expect(pt).toContain('Codorna Card de @demo-veterano')
     expect(pt).toContain('Nível 40 (Mestre), classe Ferreiro')
-    expect(en).toContain('Guild Card of @demo-veterano')
+    expect(en).toContain('Codorna Card of @demo-veterano')
     expect(en).toContain('Level 40 (Master), Blacksmith class')
   })
 

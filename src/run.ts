@@ -5,7 +5,7 @@ import { buildCharacter, type Character } from './game/character'
 import { GitHubClient } from './github/client'
 import { collectPlayer } from './github/collect'
 import { commitFiles } from './github/commit'
-import { GuildCardError } from './github/errors'
+import { CodornaCardError } from './github/errors'
 import { formatNumber, strings } from './i18n'
 import { outputFiles, parseLang, readInputs, type Inputs } from './inputs'
 import { renderCard } from './render/card'
@@ -26,7 +26,7 @@ export interface RunResult {
 }
 
 /** Endereço do projeto (usado no resumo do job). */
-export const PROJECT_URL = 'https://github.com/GabrielKoglin/guild-card'
+export const PROJECT_URL = 'https://github.com/GabrielKoglin/codorna-card'
 const RULES_URL = `${PROJECT_URL}/blob/main/docs/regras.md`
 
 function summaryMarkdown(character: Character, inputs: Inputs, files: string[]): string {
@@ -84,7 +84,7 @@ export async function run(deps: RunDependencies): Promise<RunResult> {
     warn: (message) => logger.warning(message),
   })
 
-  const data = await logger.group(`Guild Card · @${inputs.username}`, () =>
+  const data = await logger.group(`Codorna Card · @${inputs.username}`, () =>
     collectPlayer({
       client,
       login: inputs.username,
@@ -173,7 +173,7 @@ export async function main(
   } catch (error) {
     const lang = parseLang(env.INPUT_LANG ?? '') ?? 'pt-BR'
     const message =
-      error instanceof GuildCardError
+      error instanceof CodornaCardError
         ? error.message
         : strings(lang).errors.unexpected(error instanceof Error ? error.message : String(error))
     logger.error(message)

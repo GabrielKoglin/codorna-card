@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GitHubClient } from '../src/github/client'
 import { collectPlayer, quarterWindows, yearWindows } from '../src/github/collect'
-import { GuildCardError } from '../src/github/errors'
+import { CodornaCardError } from '../src/github/errors'
 import { fakeGitHub, sampleUser, type FakeUser } from './helpers/fake-github'
 
 const NOW = new Date('2026-11-02T12:00:00Z')
@@ -67,14 +67,14 @@ describe('coleta', () => {
     expect(y2025?.pullRequests).toBe(5)
     expect(y2025?.reviews).toBe(3)
     // Buscas de PRs mesclados só públicos e com o login certo.
-    const profile = calls.find((c) => c.operation === 'GuildProfile')?.body as {
+    const profile = calls.find((c) => c.operation === 'CodornaProfile')?.body as {
       variables: Record<string, string>
     }
     expect(profile.variables.merged).toBe('is:pr is:merged is:public author:pixel-dev')
     expect(profile.variables.mergedElsewhere).toBe(
       'is:pr is:merged is:public author:pixel-dev -user:pixel-dev',
     )
-    expect(calls.some((c) => c.operation === 'GuildQuarters')).toBe(false)
+    expect(calls.some((c) => c.operation === 'CodornaQuarters')).toBe(false)
   })
 
   it('relê por trimestre quando um repositório passa de 100 dias de commit no ano', async () => {
@@ -84,7 +84,7 @@ describe('coleta', () => {
       count: 20,
     }))
     const { data, calls } = await collect(sampleUser({ commits }))
-    expect(calls.filter((c) => c.operation === 'GuildQuarters')).toHaveLength(1)
+    expect(calls.filter((c) => c.operation === 'CodornaQuarters')).toHaveLength(1)
     const days = data.years.find((y) => y.year === 2025)?.commitsByDay ?? {}
     expect(Object.keys(days)).toHaveLength(150)
     expect(Object.values(days).every((n) => n === 20)).toBe(true)
@@ -97,21 +97,21 @@ describe('coleta', () => {
     }))
     const { data, calls } = await collect(sampleUser({ repositories }))
     expect(data.repositories).toHaveLength(230)
-    expect(calls.filter((c) => c.operation === 'GuildRepositories')).toHaveLength(3)
+    expect(calls.filter((c) => c.operation === 'CodornaRepositories')).toHaveLength(3)
   })
 
   it('recusa organizações com mensagem clara', async () => {
     const error = await collect(sampleUser({ login: 'minha-org', type: 'Organization' })).catch(
       (e: unknown) => e,
     )
-    expect(error).toBeInstanceOf(GuildCardError)
-    expect((error as GuildCardError).code).toBe('not-user')
-    expect((error as GuildCardError).message).toContain('"minha-org" é uma organização')
+    expect(error).toBeInstanceOf(CodornaCardError)
+    expect((error as CodornaCardError).code).toBe('not-user')
+    expect((error as CodornaCardError).message).toContain('"minha-org" é uma organização')
   })
 
   it('usuário inexistente', async () => {
     const error = await collect(null, 'fantasma').catch((e: unknown) => e)
-    expect((error as GuildCardError).code).toBe('not-found')
-    expect((error as GuildCardError).message).toBe('Usuário "fantasma" não encontrado no GitHub.')
+    expect((error as CodornaCardError).code).toBe('not-found')
+    expect((error as CodornaCardError).message).toBe('Usuário "fantasma" não encontrado no GitHub.')
   })
 })

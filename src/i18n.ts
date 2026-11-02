@@ -115,7 +115,7 @@ export interface Strings {
 
 const PT_BR: Strings = {
   card: {
-    header: 'GUILD CARD',
+    header: 'CODORNA CARD',
     level: 'NÍVEL',
     xp: 'XP',
     since: (year) => `desde ${year}`,
@@ -162,12 +162,12 @@ const PT_BR: Strings = {
     mythic: 'Mítico',
   },
   a11y: {
-    title: (login) => `Guild Card de @${login}`,
+    title: (login) => `Codorna Card de @${login}`,
     desc: (info) =>
       `Nível ${info.level} (${info.rank}), classe ${info.className}, ${info.xp} XP. ` +
       `Atributos: ${info.attributes}. Linguagens: ${info.languages}. ${info.stats}.`,
   },
-  commitMessage: 'Atualiza o Guild Card',
+  commitMessage: 'Atualiza o Codorna Card',
   log: {
     fetching: (login) => `Buscando a atividade pública de @${login}…`,
     years: (count, from, to) =>
@@ -203,7 +203,7 @@ const PT_BR: Strings = {
     invalidBoolean: (name, value) => `Valor inválido em ${name}: "${value}". Use true ou false.`,
     userNotFound: (login) => `Usuário "${login}" não encontrado no GitHub.`,
     isOrganization: (login) =>
-      `"${login}" é uma organização. O Guild Card é de pessoas: informe o seu login em \`username\`.`,
+      `"${login}" é uma organização. O Codorna Card é de pessoas: informe o seu login em \`username\`.`,
     badCredentials: 'O GitHub recusou o token (401). Confira se ele existe e se não expirou.',
     forbidden: (detail) => `O GitHub negou o acesso (403): ${detail}`,
     rateLimited: (resetAt) =>
@@ -226,7 +226,7 @@ const PT_BR: Strings = {
     unexpected: (detail) => `Erro inesperado: ${detail}`,
   },
   summary: {
-    title: (login) => `Guild Card de @${login}`,
+    title: (login) => `Codorna Card de @${login}`,
     level: 'Nível',
     className: 'Classe',
     rank: 'Patente',
@@ -249,7 +249,7 @@ const PT_BR: Strings = {
 
 const EN: Strings = {
   card: {
-    header: 'GUILD CARD',
+    header: 'CODORNA CARD',
     level: 'LEVEL',
     xp: 'XP',
     since: (year) => `since ${year}`,
@@ -296,12 +296,12 @@ const EN: Strings = {
     mythic: 'Mythic',
   },
   a11y: {
-    title: (login) => `Guild Card of @${login}`,
+    title: (login) => `Codorna Card of @${login}`,
     desc: (info) =>
       `Level ${info.level} (${info.rank}), ${info.className} class, ${info.xp} XP. ` +
       `Attributes: ${info.attributes}. Languages: ${info.languages}. ${info.stats}.`,
   },
-  commitMessage: 'Update Guild Card',
+  commitMessage: 'Update Codorna Card',
   log: {
     fetching: (login) => `Fetching public activity for @${login}…`,
     years: (count, from, to) =>
@@ -336,7 +336,7 @@ const EN: Strings = {
     invalidBoolean: (name, value) => `Invalid value for ${name}: "${value}". Use true or false.`,
     userNotFound: (login) => `User "${login}" was not found on GitHub.`,
     isOrganization: (login) =>
-      `"${login}" is an organization. Guild Cards are for people: set your login in \`username\`.`,
+      `"${login}" is an organization. Codorna Cards are for people: set your login in \`username\`.`,
     badCredentials: 'GitHub rejected the token (401). Check that it exists and has not expired.',
     forbidden: (detail) => `GitHub denied access (403): ${detail}`,
     rateLimited: (resetAt) =>
@@ -359,7 +359,7 @@ const EN: Strings = {
     unexpected: (detail) => `Unexpected error: ${detail}`,
   },
   summary: {
-    title: (login) => `Guild Card of @${login}`,
+    title: (login) => `Codorna Card of @${login}`,
     level: 'Level',
     className: 'Class',
     rank: 'Rank',

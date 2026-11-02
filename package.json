@@ -1,5 +1,5 @@
 {
-  "name": "guild-card",
+  "name": "codorna-card",
   "version": "0.1.0",
   "description": "GitHub Action que transforma sua atividade pública no GitHub em um card de RPG em pixel art para o README do perfil.",
   "keywords": [

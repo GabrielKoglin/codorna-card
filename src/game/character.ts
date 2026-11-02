@@ -1,4 +1,4 @@
-import { guildNumber, loginHash } from '../hash'
+import { cardNumber, loginHash } from '../hash'
 import type { PlayerData } from '../types'
 import { computeAttributes, type Attributes } from './attributes'
 import { dominantClass, languageShares, type ClassId, type LanguageShare } from './classes'
@@ -19,7 +19,7 @@ export interface Character {
   /** Ano de criação da conta. */
   memberSince: number
   /** Número da carteirinha (derivado do hash do username). */
-  guildNumber: string
+  cardNumber: string
   hash: Uint8Array
   activity: CountedActivity
   xp: XpBreakdown
@@ -45,7 +45,7 @@ export function buildCharacter(data: PlayerData): Character {
     memberSince: Number.isNaN(created.getTime())
       ? new Date().getUTCFullYear()
       : created.getUTCFullYear(),
-    guildNumber: guildNumber(hash),
+    cardNumber: cardNumber(hash),
     hash,
     activity,
     xp,

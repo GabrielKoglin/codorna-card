@@ -168,7 +168,7 @@ export function renderCard(character: Character, options: RenderOptions): string
     2,
   )
   canvas.text(t.card.header, 42, 22, { fill: rankText })
-  canvas.text(`${t.card.since(character.memberSince)} · #${character.guildNumber}`, W - 28, 22, {
+  canvas.text(`${t.card.since(character.memberSince)} · #${character.cardNumber}`, W - 28, 22, {
     fill: theme.muted,
     align: 'right',
   })

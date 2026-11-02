@@ -97,8 +97,8 @@ function seededRandom(seed, salt = 0) {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 }
-/** Número da carteirinha da guilda, ex.: "4F2A-91C3". */
-function guildNumber(hash) {
+/** Número da carteirinha, ex.: "4F2A-91C3". */
+function cardNumber(hash) {
     const hex = [...hash.slice(-4)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 4)}-${hex.slice(4)}`.toUpperCase();
 }
@@ -677,7 +677,7 @@ function buildCharacter(data) {
         memberSince: Number.isNaN(created.getTime())
             ? new Date().getUTCFullYear()
             : created.getUTCFullYear(),
-        guildNumber: guildNumber(hash),
+        cardNumber: cardNumber(hash),
         hash,
         activity,
         xp,
@@ -708,7 +708,7 @@ function utcTime(date) {
 }
 const PT_BR = {
     card: {
-        header: 'GUILD CARD',
+        header: 'CODORNA CARD',
         level: 'NÍVEL',
         xp: 'XP',
         since: (year) => `desde ${year}`,
@@ -755,11 +755,11 @@ const PT_BR = {
         mythic: 'Mítico',
     },
     a11y: {
-        title: (login) => `Guild Card de @${login}`,
+        title: (login) => `Codorna Card de @${login}`,
         desc: (info) => `Nível ${info.level} (${info.rank}), classe ${info.className}, ${info.xp} XP. ` +
             `Atributos: ${info.attributes}. Linguagens: ${info.languages}. ${info.stats}.`,
     },
-    commitMessage: 'Atualiza o Guild Card',
+    commitMessage: 'Atualiza o Codorna Card',
     log: {
         fetching: (login) => `Buscando a atividade pública de @${login}…`,
         years: (count, from, to) => `Lendo ${count} ${count === 1 ? 'ano' : 'anos'} de contribuições (${from}–${to})…`,
@@ -785,7 +785,7 @@ const PT_BR = {
         invalidOutput: (value) => `Saída inválida: "${value}". Use um caminho relativo dentro do repositório, terminado em .svg.`,
         invalidBoolean: (name, value) => `Valor inválido em ${name}: "${value}". Use true ou false.`,
         userNotFound: (login) => `Usuário "${login}" não encontrado no GitHub.`,
-        isOrganization: (login) => `"${login}" é uma organização. O Guild Card é de pessoas: informe o seu login em \`username\`.`,
+        isOrganization: (login) => `"${login}" é uma organização. O Codorna Card é de pessoas: informe o seu login em \`username\`.`,
         badCredentials: 'O GitHub recusou o token (401). Confira se ele existe e se não expirou.',
         forbidden: (detail) => `O GitHub negou o acesso (403): ${detail}`,
         rateLimited: (resetAt) => resetAt
@@ -803,7 +803,7 @@ const PT_BR = {
         unexpected: (detail) => `Erro inesperado: ${detail}`,
     },
     summary: {
-        title: (login) => `Guild Card de @${login}`,
+        title: (login) => `Codorna Card de @${login}`,
         level: 'Nível',
         className: 'Classe',
         rank: 'Patente',
@@ -825,7 +825,7 @@ const PT_BR = {
 };
 const EN = {
     card: {
-        header: 'GUILD CARD',
+        header: 'CODORNA CARD',
         level: 'LEVEL',
         xp: 'XP',
         since: (year) => `since ${year}`,
@@ -872,11 +872,11 @@ const EN = {
         mythic: 'Mythic',
     },
     a11y: {
-        title: (login) => `Guild Card of @${login}`,
+        title: (login) => `Codorna Card of @${login}`,
         desc: (info) => `Level ${info.level} (${info.rank}), ${info.className} class, ${info.xp} XP. ` +
             `Attributes: ${info.attributes}. Languages: ${info.languages}. ${info.stats}.`,
     },
-    commitMessage: 'Update Guild Card',
+    commitMessage: 'Update Codorna Card',
     log: {
         fetching: (login) => `Fetching public activity for @${login}…`,
         years: (count, from, to) => `Reading ${count} ${count === 1 ? 'year' : 'years'} of contributions (${from}–${to})…`,
@@ -902,7 +902,7 @@ const EN = {
         invalidOutput: (value) => `Invalid output: "${value}". Use a relative path inside the repository ending in .svg.`,
         invalidBoolean: (name, value) => `Invalid value for ${name}: "${value}". Use true or false.`,
         userNotFound: (login) => `User "${login}" was not found on GitHub.`,
-        isOrganization: (login) => `"${login}" is an organization. Guild Cards are for people: set your login in \`username\`.`,
+        isOrganization: (login) => `"${login}" is an organization. Codorna Cards are for people: set your login in \`username\`.`,
         badCredentials: 'GitHub rejected the token (401). Check that it exists and has not expired.',
         forbidden: (detail) => `GitHub denied access (403): ${detail}`,
         rateLimited: (resetAt) => resetAt
@@ -920,7 +920,7 @@ const EN = {
         unexpected: (detail) => `Unexpected error: ${detail}`,
     },
     summary: {
-        title: (login) => `Guild Card of @${login}`,
+        title: (login) => `Codorna Card of @${login}`,
         level: 'Level',
         className: 'Class',
         rank: 'Rank',
@@ -946,12 +946,12 @@ function strings(lang) {
 
 ;// CONCATENATED MODULE: ./src/github/errors.ts
 /** Erro com mensagem pronta para mostrar a quem usa a Action. */
-class GuildCardError extends Error {
+class CodornaCardError extends Error {
     code;
     constructor(code, message) {
         super(message);
         this.code = code;
-        this.name = 'GuildCardError';
+        this.name = 'CodornaCardError';
     }
 }
 
@@ -998,7 +998,7 @@ class GitHubClient {
     constructor(options) {
         const t = strings(options.lang);
         if (!options.token)
-            throw new GuildCardError('input', t.errors.missingToken);
+            throw new CodornaCardError('input', t.errors.missingToken);
         this.token = options.token;
         this.lang = options.lang;
         this.apiUrl = (options.apiUrl || 'https://api.github.com').replace(/\/+$/, '');
@@ -1018,7 +1018,7 @@ class GitHubClient {
         this.log(this.t.log.retrying(attempt + 1, delay));
         await this.sleep(delay * 1000);
     }
-    /** Faz a requisição, repetindo falhas temporárias. Erros de limite viram GuildCardError. */
+    /** Faz a requisição, repetindo falhas temporárias. Erros de limite viram CodornaCardError. */
     async request(url, init) {
         for (let attempt = 1;; attempt++) {
             let response;
@@ -1028,7 +1028,7 @@ class GitHubClient {
                     ...init,
                     headers: {
                         Authorization: `Bearer ${this.token}`,
-                        'User-Agent': 'guild-card-action',
+                        'User-Agent': 'codorna-card-action',
                         ...init.headers,
                     },
                     signal: AbortSignal.timeout(this.timeoutMs),
@@ -1042,20 +1042,20 @@ class GitHubClient {
                 }
                 const name = error instanceof Error ? error.name : '';
                 if (name === 'TimeoutError' || name === 'AbortError') {
-                    throw new GuildCardError('timeout', this.t.errors.timeout);
+                    throw new CodornaCardError('timeout', this.t.errors.timeout);
                 }
                 const detail = error instanceof Error ? error.message : String(error);
-                throw new GuildCardError('network', this.t.errors.network(detail));
+                throw new CodornaCardError('network', this.t.errors.network(detail));
             }
             if (RETRYABLE_STATUS.has(response.status) && attempt <= this.maxRetries) {
                 await this.wait(attempt);
                 continue;
             }
             if (response.status === 401)
-                throw new GuildCardError('auth', this.t.errors.badCredentials);
+                throw new CodornaCardError('auth', this.t.errors.badCredentials);
             if (response.status === 403 || response.status === 429) {
                 if (response.headers.get('x-ratelimit-remaining') === '0') {
-                    throw new GuildCardError('rate-limit', this.t.errors.rateLimited(resetFrom(response.headers)));
+                    throw new CodornaCardError('rate-limit', this.t.errors.rateLimited(resetFrom(response.headers)));
                 }
                 const retryAfter = Number(response.headers.get('retry-after'));
                 const secondary = /secondary rate limit|abuse/i.test(body) ||
@@ -1066,7 +1066,7 @@ class GitHubClient {
                         await this.wait(attempt, seconds);
                         continue;
                     }
-                    throw new GuildCardError('secondary-rate-limit', this.t.errors.secondaryRateLimit);
+                    throw new CodornaCardError('secondary-rate-limit', this.t.errors.secondaryRateLimit);
                 }
             }
             return { status: response.status, headers: response.headers, body };
@@ -1081,26 +1081,26 @@ class GitHubClient {
                 body: JSON.stringify({ query, variables }),
             });
             if (response.status === 403) {
-                throw new GuildCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)));
+                throw new CodornaCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)));
             }
             if (response.status >= 400) {
-                throw new GuildCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
+                throw new CodornaCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
             }
             let payload;
             try {
                 payload = JSON.parse(response.body);
             }
             catch {
-                throw new GuildCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
+                throw new CodornaCardError('api', this.t.errors.api(response.status, messageFrom(response.body)));
             }
             const errors = payload.errors ?? [];
             if (errors.length > 0) {
                 if (errors.some((error) => error.type === 'RATE_LIMITED')) {
-                    throw new GuildCardError('rate-limit', this.t.errors.rateLimited(resetFrom(response.headers)));
+                    throw new CodornaCardError('rate-limit', this.t.errors.rateLimited(resetFrom(response.headers)));
                 }
                 const notFound = errors.find((error) => error.type === 'NOT_FOUND');
                 if (notFound) {
-                    throw new GuildCardError('not-found', this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'));
+                    throw new CodornaCardError('not-found', this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'));
                 }
                 const detail = errors.map((error) => error.message ?? error.type ?? '?').join('; ');
                 // O GitHub às vezes responde "Something went wrong" quando a consulta demora; vale repetir.
@@ -1109,10 +1109,10 @@ class GitHubClient {
                     await this.wait(attempt);
                     continue;
                 }
-                throw new GuildCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail));
+                throw new CodornaCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail));
             }
             if (!payload.data)
-                throw new GuildCardError('graphql', this.t.errors.graphql('resposta sem dados'));
+                throw new CodornaCardError('graphql', this.t.errors.graphql('resposta sem dados'));
             this.trackRateLimit(payload.data.rateLimit);
             return payload.data;
         }
@@ -1154,7 +1154,7 @@ class GitHubClient {
  * `isPrivate` são descartados mesmo que o token consiga enxergá-los.
  */
 const PROFILE_QUERY = /* GraphQL */ `
-  query GuildProfile($login: String!, $merged: String!, $mergedElsewhere: String!) {
+  query CodornaProfile($login: String!, $merged: String!, $mergedElsewhere: String!) {
     rateLimit {
       remaining
       resetAt
@@ -1175,7 +1175,7 @@ const PROFILE_QUERY = /* GraphQL */ `
   }
 `;
 const REPOSITORIES_QUERY = /* GraphQL */ `
-  query GuildRepositories($login: String!, $cursor: String) {
+  query CodornaRepositories($login: String!, $cursor: String) {
     rateLimit {
       remaining
       resetAt
@@ -1211,7 +1211,7 @@ const REPOSITORIES_QUERY = /* GraphQL */ `
   }
 `;
 const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
-  fragment GuildCommitDays on ContributionsCollection {
+  fragment CodornaCommitDays on ContributionsCollection {
     commitContributionsByRepository(maxRepositories: 100) {
       repository {
         isPrivate
@@ -1227,14 +1227,14 @@ const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
   }
 `;
 const YEAR_QUERY = /* GraphQL */ `
-  query GuildYear($login: String!, $from: DateTime!, $to: DateTime!) {
+  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!) {
     rateLimit {
       remaining
       resetAt
     }
     user(login: $login) {
       contributionsCollection(from: $from, to: $to) {
-        ...GuildCommitDays
+        ...CodornaCommitDays
         issueContributionsByRepository(maxRepositories: 100) {
           repository {
             isPrivate
@@ -1267,9 +1267,9 @@ const YEAR_QUERY = /* GraphQL */ `
 /** Consulta só de commits, com uma janela por trimestre (no máximo 92 dias por repositório). */
 function quartersQuery(count) {
     const variables = Array.from({ length: count }, (_, i) => `$from${i}: DateTime!, $to${i}: DateTime!`);
-    const windows = Array.from({ length: count }, (_, i) => `q${i}: contributionsCollection(from: $from${i}, to: $to${i}) { ...GuildCommitDays }`);
+    const windows = Array.from({ length: count }, (_, i) => `q${i}: contributionsCollection(from: $from${i}, to: $to${i}) { ...CodornaCommitDays }`);
     return `
-  query GuildQuarters($login: String!, ${variables.join(', ')}) {
+  query CodornaQuarters($login: String!, ${variables.join(', ')}) {
     rateLimit {
       remaining
       resetAt
@@ -1379,7 +1379,7 @@ async function collectYear(options, login, window) {
     });
     const collection = data.user?.contributionsCollection;
     if (!collection)
-        throw new GuildCardError('not-found', t.errors.userNotFound(login));
+        throw new CodornaCardError('not-found', t.errors.userNotFound(login));
     let commits = commitDays(collection.commitContributionsByRepository);
     if (commits.incomplete) {
         // Algum repositório teve mais de 100 dias de commit no ano: relê por trimestre.
@@ -1437,16 +1437,16 @@ async function collectPlayer(options) {
         });
     }
     catch (error) {
-        if (error instanceof GuildCardError && error.code === 'not-found') {
-            throw new GuildCardError('not-found', t.errors.userNotFound(options.login));
+        if (error instanceof CodornaCardError && error.code === 'not-found') {
+            throw new CodornaCardError('not-found', t.errors.userNotFound(options.login));
         }
         throw error;
     }
     const owner = profile.owner;
     if (!owner)
-        throw new GuildCardError('not-found', t.errors.userNotFound(options.login));
+        throw new CodornaCardError('not-found', t.errors.userNotFound(options.login));
     if (owner.__typename !== 'User' || !owner.createdAt) {
-        throw new GuildCardError('not-user', t.errors.isOrganization(owner.login));
+        throw new CodornaCardError('not-user', t.errors.isOrganization(owner.login));
     }
     const login = owner.login;
     const createdAt = new Date(owner.createdAt);
@@ -1502,19 +1502,19 @@ async function commitFiles(options, attempt = 1) {
     const base = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
     const fail = (status, message, writing) => {
         if (status === 409 || /repository is empty/i.test(message)) {
-            throw new GuildCardError('empty-repository', t.errors.emptyRepository);
+            throw new CodornaCardError('empty-repository', t.errors.emptyRepository);
         }
         if (/protected branch|branch protection|rule violations|repository rule/i.test(message)) {
-            throw new GuildCardError('protected-branch', t.errors.protectedBranch(branch));
+            throw new CodornaCardError('protected-branch', t.errors.protectedBranch(branch));
         }
         if (status === 403 || (writing && status === 404)) {
-            throw new GuildCardError('permission', t.errors.noWritePermission);
+            throw new CodornaCardError('permission', t.errors.noWritePermission);
         }
-        throw new GuildCardError('api', t.errors.api(status, message));
+        throw new CodornaCardError('api', t.errors.api(status, message));
     };
     const ref = await client.rest('GET', `${base}/git/ref/heads/${encodePath(branch)}`);
     if (ref.status === 404)
-        throw new GuildCardError('branch', t.errors.branchNotFound(branch));
+        throw new CodornaCardError('branch', t.errors.branchNotFound(branch));
     if (ref.status !== 200 || !ref.data)
         fail(ref.status, ref.message, false);
     const parentSha = ref.data?.object.sha ?? '';
@@ -1593,7 +1593,7 @@ function parseBoolean(value) {
 }
 /** Normaliza e valida o caminho de saída (relativo, dentro do repositório, terminado em .svg). */
 function normalizeOutput(value) {
-    const raw = (value || 'guild-card.svg').trim().replace(/\\/g, '/');
+    const raw = (value || 'codorna-card.svg').trim().replace(/\\/g, '/');
     if (raw.startsWith('/') || /^[a-z]:/i.test(raw))
         return null;
     const normalized = external_node_path_namespaceObject.posix.normalize(raw).replace(/^\.\//, '');
@@ -1620,27 +1620,27 @@ function readInputs(env) {
     const langInput = getInput(env, 'lang');
     const lang = parseLang(langInput);
     if (!lang) {
-        throw new GuildCardError('input', `${strings('pt-BR').errors.invalidLang(langInput)} / ${strings('en').errors.invalidLang(langInput)}`);
+        throw new CodornaCardError('input', `${strings('pt-BR').errors.invalidLang(langInput)} / ${strings('en').errors.invalidLang(langInput)}`);
     }
     const t = strings(lang);
     const username = getInput(env, 'username') || (env.GITHUB_REPOSITORY_OWNER ?? '').trim();
     if (!LOGIN_PATTERN.test(username))
-        throw new GuildCardError('input', t.errors.invalidUsername(username));
+        throw new CodornaCardError('input', t.errors.invalidUsername(username));
     const token = getInput(env, 'token');
     if (!token)
-        throw new GuildCardError('input', t.errors.missingToken);
+        throw new CodornaCardError('input', t.errors.missingToken);
     const outputInput = getInput(env, 'output');
     const output = normalizeOutput(outputInput);
     if (!output)
-        throw new GuildCardError('input', t.errors.invalidOutput(outputInput));
+        throw new CodornaCardError('input', t.errors.invalidOutput(outputInput));
     const themeInput = getInput(env, 'theme').toLowerCase() || 'dark';
     if (themeInput !== 'dark' && themeInput !== 'light' && themeInput !== 'both') {
-        throw new GuildCardError('input', t.errors.invalidTheme(themeInput));
+        throw new CodornaCardError('input', t.errors.invalidTheme(themeInput));
     }
     const commitInput = getInput(env, 'commit');
     const commit = commitInput === '' ? true : parseBoolean(commitInput);
     if (commit === null)
-        throw new GuildCardError('input', t.errors.invalidBoolean('commit', commitInput));
+        throw new CodornaCardError('input', t.errors.invalidBoolean('commit', commitInput));
     return { username, token, output, theme: themeInput, lang, commit };
 }
 
@@ -2699,7 +2699,7 @@ function renderCard(character, options) {
     canvas.rect(12, 46, W - 24, 2, theme.panelEdge);
     canvas.bitmap(['..#..', '.#g#.', '#gwg#', '.#g#.', '..#..'], { '#': theme.outline, g: metal.base, w: metal.gem }, 26, 24, 2);
     canvas.text(t.card.header, 42, 22, { fill: rankText });
-    canvas.text(`${t.card.since(character.memberSince)} · #${character.guildNumber}`, W - 28, 22, {
+    canvas.text(`${t.card.since(character.memberSince)} · #${character.cardNumber}`, W - 28, 22, {
         fill: theme.muted,
         align: 'right',
     });
@@ -2921,7 +2921,7 @@ function renderCard(character, options) {
 
 
 /** Endereço do projeto (usado no resumo do job). */
-const PROJECT_URL = 'https://github.com/GabrielKoglin/guild-card';
+const PROJECT_URL = 'https://github.com/GabrielKoglin/codorna-card';
 const RULES_URL = `${PROJECT_URL}/blob/main/docs/regras.md`;
 function summaryMarkdown(character, inputs, files) {
     const t = strings(inputs.lang);
@@ -2973,7 +2973,7 @@ async function run(deps) {
         log: (message) => logger.info(message),
         warn: (message) => logger.warning(message),
     });
-    const data = await logger.group(`Guild Card · @${inputs.username}`, () => collectPlayer({
+    const data = await logger.group(`Codorna Card · @${inputs.username}`, () => collectPlayer({
         client,
         login: inputs.username,
         lang: inputs.lang,
@@ -3042,7 +3042,7 @@ async function main(env = process.env, logger = consoleLogger()) {
     }
     catch (error) {
         const lang = parseLang(env.INPUT_LANG ?? '') ?? 'pt-BR';
-        const message = error instanceof GuildCardError
+        const message = error instanceof CodornaCardError
             ? error.message
             : strings(lang).errors.unexpected(error instanceof Error ? error.message : String(error));
         logger.error(message);

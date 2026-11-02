@@ -4,7 +4,7 @@
  */
 
 export const PROFILE_QUERY = /* GraphQL */ `
-  query GuildProfile($login: String!, $merged: String!, $mergedElsewhere: String!) {
+  query CodornaProfile($login: String!, $merged: String!, $mergedElsewhere: String!) {
     rateLimit {
       remaining
       resetAt
@@ -26,7 +26,7 @@ export const PROFILE_QUERY = /* GraphQL */ `
 `
 
 export const REPOSITORIES_QUERY = /* GraphQL */ `
-  query GuildRepositories($login: String!, $cursor: String) {
+  query CodornaRepositories($login: String!, $cursor: String) {
     rateLimit {
       remaining
       resetAt
@@ -63,7 +63,7 @@ export const REPOSITORIES_QUERY = /* GraphQL */ `
 `
 
 const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
-  fragment GuildCommitDays on ContributionsCollection {
+  fragment CodornaCommitDays on ContributionsCollection {
     commitContributionsByRepository(maxRepositories: 100) {
       repository {
         isPrivate
@@ -80,14 +80,14 @@ const COMMIT_DAYS_FRAGMENT = /* GraphQL */ `
 `
 
 export const YEAR_QUERY = /* GraphQL */ `
-  query GuildYear($login: String!, $from: DateTime!, $to: DateTime!) {
+  query CodornaYear($login: String!, $from: DateTime!, $to: DateTime!) {
     rateLimit {
       remaining
       resetAt
     }
     user(login: $login) {
       contributionsCollection(from: $from, to: $to) {
-        ...GuildCommitDays
+        ...CodornaCommitDays
         issueContributionsByRepository(maxRepositories: 100) {
           repository {
             isPrivate
@@ -126,10 +126,11 @@ export function quartersQuery(count: number): string {
   )
   const windows = Array.from(
     { length: count },
-    (_, i) => `q${i}: contributionsCollection(from: $from${i}, to: $to${i}) { ...GuildCommitDays }`,
+    (_, i) =>
+      `q${i}: contributionsCollection(from: $from${i}, to: $to${i}) { ...CodornaCommitDays }`,
   )
   return `
-  query GuildQuarters($login: String!, ${variables.join(', ')}) {
+  query CodornaQuarters($login: String!, ${variables.join(', ')}) {
     rateLimit {
       remaining
       resetAt

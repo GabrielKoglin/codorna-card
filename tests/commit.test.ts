@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GitHubClient } from '../src/github/client'
 import { BOT_AUTHOR, commitFiles, gitBlobSha, type CommitFile } from '../src/github/commit'
-import type { GuildCardError } from '../src/github/errors'
+import type { CodornaCardError } from '../src/github/errors'
 import { fakeGitHub, type FakeOptions } from './helpers/fake-github'
 
 const json = (status: number, body: unknown) => () => new Response(JSON.stringify(body), { status })
@@ -21,14 +21,14 @@ function setup(options: FakeOptions, files: CommitFile[]) {
       repo: 'pixel-dev',
       branch: 'main',
       files,
-      message: 'Atualiza o Guild Card',
+      message: 'Atualiza o Codorna Card',
       lang: 'pt-BR',
     })
   return { run, calls: fake.calls }
 }
 
-const DARK = { path: 'guild-card-dark.svg', content: '<svg>dark</svg>\n' }
-const LIGHT = { path: 'guild-card-light.svg', content: '<svg>light</svg>\n' }
+const DARK = { path: 'codorna-card-dark.svg', content: '<svg>dark</svg>\n' }
+const LIGHT = { path: 'codorna-card-light.svg', content: '<svg>light</svg>\n' }
 
 describe('commit pela API', () => {
   it('calcula o SHA de blob igual ao git', () => {
@@ -46,8 +46,8 @@ describe('commit pela API', () => {
     }
     expect(tree.base_tree).toBe('tree-base')
     expect(tree.tree.map((t) => [t.path, t.mode])).toEqual([
-      ['guild-card-dark.svg', '100644'],
-      ['guild-card-light.svg', '100644'],
+      ['codorna-card-dark.svg', '100644'],
+      ['codorna-card-light.svg', '100644'],
     ])
     const commit = calls.find((c) => c.method === 'POST' && c.url.endsWith('/git/commits'))
       ?.body as {
@@ -57,7 +57,7 @@ describe('commit pela API', () => {
     }
     expect(commit.parents).toEqual(['abc123'])
     expect(commit.author).toEqual(BOT_AUTHOR)
-    expect(commit.message).toBe('Atualiza o Guild Card')
+    expect(commit.message).toBe('Atualiza o Codorna Card')
     expect(repo.headSha).toBe('c0ffee1234567890')
   })
 
@@ -91,7 +91,7 @@ describe('commit pela API', () => {
 
   it('branch inexistente', async () => {
     const { run } = setup({ repo: { branch: 'outra', headSha: 'x', files: [] } }, [DARK])
-    const error = (await run().catch((e: unknown) => e)) as GuildCardError
+    const error = (await run().catch((e: unknown) => e)) as CodornaCardError
     expect(error.code).toBe('branch')
   })
 
@@ -109,7 +109,7 @@ describe('commit pela API', () => {
       },
       [DARK],
     )
-    const error = (await run().catch((e: unknown) => e)) as GuildCardError
+    const error = (await run().catch((e: unknown) => e)) as CodornaCardError
     expect(error.code).toBe('permission')
     expect(error.message).toContain('contents: write')
   })
@@ -130,7 +130,9 @@ describe('commit pela API', () => {
       },
       [DARK],
     )
-    expect(((await run().catch((e: unknown) => e)) as GuildCardError).code).toBe('protected-branch')
+    expect(((await run().catch((e: unknown) => e)) as CodornaCardError).code).toBe(
+      'protected-branch',
+    )
   })
 
   it('repositório vazio', async () => {
@@ -141,6 +143,8 @@ describe('commit pela API', () => {
       },
       [DARK],
     )
-    expect(((await run().catch((e: unknown) => e)) as GuildCardError).code).toBe('empty-repository')
+    expect(((await run().catch((e: unknown) => e)) as CodornaCardError).code).toBe(
+      'empty-repository',
+    )
   })
 })

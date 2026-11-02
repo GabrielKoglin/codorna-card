@@ -1,6 +1,6 @@
 # Regras do jogo
 
-Este documento é a referência das regras do Guild Card. O código que aplica cada regra
+Este documento é a referência das regras do Codorna Card. O código que aplica cada regra
 está em [`src/game/`](../src/game), e toda mudança de regra precisa atualizar este arquivo.
 
 Princípios:
@@ -56,7 +56,7 @@ fechar em loop), e um PR mesclado ou um review costuma exigir outra pessoa. Os t
 escolhidos para quase nunca atrapalhar quem trabalha de verdade.
 
 O que **não** dá XP: estrelas, seguidores, repositórios criados (popularidade e quantidade de
-repositórios são fáceis de farmar) e os commits do próprio Guild Card, que são feitos em nome
+repositórios são fáceis de farmar) e os commits do próprio Codorna Card, que são feitos em nome
 do `github-actions[bot]` e por isso não contam como contribuição sua.
 
 ## Nível
@@ -134,14 +134,14 @@ Com curva 0,4 o atributo cresce rápido no começo e devagar perto do topo.
 
 Exemplos com curva 0,4 e referência 2.000: 10 PRs mesclados dão DES 12; 100 dão 30; 500 dão 57.
 
-## Avatar e número da guilda
+## Avatar e número da carteirinha
 
 - O avatar 16×16 é desenhado por código. O SHA-256 do username em minúsculas escolhe pele,
   cabelo (estilo e cor), olhos e um detalhe (sorriso, bochechas ou bigode); a classe escolhe o
   equipamento. O mesmo username sempre gera o mesmo avatar.
 - Há duas regras de legibilidade: o cabelo precisa contrastar com a pele, e em pele escura os
   olhos sempre têm brilho.
-- O número da guilda (ex.: `#CBA1-245E`) são os últimos 4 bytes do mesmo hash. É só decorativo.
+- O número da carteirinha (ex.: `#CBA1-245E`) são os últimos 4 bytes do mesmo hash. É só decorativo.
 
 ## Mudanças nas regras
 

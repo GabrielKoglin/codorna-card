@@ -1,6 +1,6 @@
 import { strings } from '../i18n'
 import type { Lang } from '../types'
-import { GuildCardError } from './errors'
+import { CodornaCardError } from './errors'
 
 export interface ClientOptions {
   token: string
@@ -78,7 +78,7 @@ export class GitHubClient {
 
   constructor(options: ClientOptions) {
     const t = strings(options.lang)
-    if (!options.token) throw new GuildCardError('input', t.errors.missingToken)
+    if (!options.token) throw new CodornaCardError('input', t.errors.missingToken)
     this.token = options.token
     this.lang = options.lang
     this.apiUrl = (options.apiUrl || 'https://api.github.com').replace(/\/+$/, '')
@@ -101,7 +101,7 @@ export class GitHubClient {
     await this.sleep(delay * 1000)
   }
 
-  /** Faz a requisição, repetindo falhas temporárias. Erros de limite viram GuildCardError. */
+  /** Faz a requisição, repetindo falhas temporárias. Erros de limite viram CodornaCardError. */
   private async request(url: string, init: RequestInit): Promise<RawResponse> {
     for (let attempt = 1; ; attempt++) {
       let response: Response
@@ -111,7 +111,7 @@ export class GitHubClient {
           ...init,
           headers: {
             Authorization: `Bearer ${this.token}`,
-            'User-Agent': 'guild-card-action',
+            'User-Agent': 'codorna-card-action',
             ...(init.headers as Record<string, string> | undefined),
           },
           signal: AbortSignal.timeout(this.timeoutMs),
@@ -124,10 +124,10 @@ export class GitHubClient {
         }
         const name = error instanceof Error ? error.name : ''
         if (name === 'TimeoutError' || name === 'AbortError') {
-          throw new GuildCardError('timeout', this.t.errors.timeout)
+          throw new CodornaCardError('timeout', this.t.errors.timeout)
         }
         const detail = error instanceof Error ? error.message : String(error)
-        throw new GuildCardError('network', this.t.errors.network(detail))
+        throw new CodornaCardError('network', this.t.errors.network(detail))
       }
 
       if (RETRYABLE_STATUS.has(response.status) && attempt <= this.maxRetries) {
@@ -135,11 +135,11 @@ export class GitHubClient {
         continue
       }
 
-      if (response.status === 401) throw new GuildCardError('auth', this.t.errors.badCredentials)
+      if (response.status === 401) throw new CodornaCardError('auth', this.t.errors.badCredentials)
 
       if (response.status === 403 || response.status === 429) {
         if (response.headers.get('x-ratelimit-remaining') === '0') {
-          throw new GuildCardError(
+          throw new CodornaCardError(
             'rate-limit',
             this.t.errors.rateLimited(resetFrom(response.headers)),
           )
@@ -154,7 +154,7 @@ export class GitHubClient {
             await this.wait(attempt, seconds)
             continue
           }
-          throw new GuildCardError('secondary-rate-limit', this.t.errors.secondaryRateLimit)
+          throw new CodornaCardError('secondary-rate-limit', this.t.errors.secondaryRateLimit)
         }
       }
 
@@ -171,10 +171,10 @@ export class GitHubClient {
         body: JSON.stringify({ query, variables }),
       })
       if (response.status === 403) {
-        throw new GuildCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)))
+        throw new CodornaCardError('forbidden', this.t.errors.forbidden(messageFrom(response.body)))
       }
       if (response.status >= 400) {
-        throw new GuildCardError(
+        throw new CodornaCardError(
           'api',
           this.t.errors.api(response.status, messageFrom(response.body)),
         )
@@ -186,7 +186,7 @@ export class GitHubClient {
       try {
         payload = JSON.parse(response.body)
       } catch {
-        throw new GuildCardError(
+        throw new CodornaCardError(
           'api',
           this.t.errors.api(response.status, messageFrom(response.body)),
         )
@@ -194,14 +194,14 @@ export class GitHubClient {
       const errors = payload.errors ?? []
       if (errors.length > 0) {
         if (errors.some((error) => error.type === 'RATE_LIMITED')) {
-          throw new GuildCardError(
+          throw new CodornaCardError(
             'rate-limit',
             this.t.errors.rateLimited(resetFrom(response.headers)),
           )
         }
         const notFound = errors.find((error) => error.type === 'NOT_FOUND')
         if (notFound) {
-          throw new GuildCardError(
+          throw new CodornaCardError(
             'not-found',
             this.t.errors.graphql(notFound.message ?? 'NOT_FOUND'),
           )
@@ -213,10 +213,10 @@ export class GitHubClient {
           await this.wait(attempt)
           continue
         }
-        throw new GuildCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail))
+        throw new CodornaCardError(transient ? 'timeout' : 'graphql', this.t.errors.graphql(detail))
       }
       if (!payload.data)
-        throw new GuildCardError('graphql', this.t.errors.graphql('resposta sem dados'))
+        throw new CodornaCardError('graphql', this.t.errors.graphql('resposta sem dados'))
       this.trackRateLimit(payload.data.rateLimit)
       return payload.data
     }

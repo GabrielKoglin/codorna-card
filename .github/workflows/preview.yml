@@ -40,5 +40,5 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: guild-card
-          path: guild-card-*.svg
+          name: codorna-card
+          path: codorna-card-*.svg

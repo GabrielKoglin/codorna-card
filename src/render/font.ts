@@ -1,7 +1,7 @@
 import { parseBitmap, pixelPath } from './pixels'
 
 /**
- * Fonte bitmap própria do Guild Card (5×7, proporcional), desenhada à mão para este
+ * Fonte bitmap própria do Codorna Card (5×7, proporcional), desenhada à mão para este
  * projeto. Coordenadas: a linha 0 é o topo das maiúsculas, a linha base fica abaixo da
  * linha 6 e as descendentes ocupam as linhas 7 e 8. Acentos sobem até a linha −3.
  */

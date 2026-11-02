@@ -1,6 +1,6 @@
 # Como contribuir
 
-Obrigado por querer ajudar o Guild Card! Contribuições pequenas e focadas são as melhores.
+Obrigado por querer ajudar o Codorna Card! Contribuições pequenas e focadas são as melhores.
 
 ## Preparar o ambiente
 

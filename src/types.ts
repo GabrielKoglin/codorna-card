@@ -32,7 +32,7 @@ export interface YearActivity {
 }
 
 /**
- * Tudo o que o Guild Card sabe sobre uma pessoa. É o que a coleta pela API produz
+ * Tudo o que o Codorna Card sabe sobre uma pessoa. É o que a coleta pela API produz
  * e é o formato dos arquivos em `fixtures/`.
  */
 export interface PlayerData {

@@ -18,7 +18,7 @@ function memoryLogger() {
 }
 
 function workspace(inputs: Record<string, string>, extra: Record<string, string> = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'guild-card-'))
+  const dir = mkdtempSync(join(tmpdir(), 'codorna-card-'))
   const output = join(dir, 'output.txt')
   const summary = join(dir, 'summary.md')
   writeFileSync(output, '')
@@ -56,10 +56,13 @@ describe('Action de ponta a ponta (API falsa)', () => {
     })
 
     expect(result.committed).toBe(true)
-    expect(result.files.map((f) => f.path)).toEqual(['guild-card-dark.svg', 'guild-card-light.svg'])
-    const dark = readFileSync(join(ws.dir, 'guild-card-dark.svg'), 'utf8')
-    expect(dark).toContain('Guild Card of @Pixel-Dev')
-    expect(readFileSync(join(ws.dir, 'guild-card-light.svg'), 'utf8')).toContain('#f7f0de')
+    expect(result.files.map((f) => f.path)).toEqual([
+      'codorna-card-dark.svg',
+      'codorna-card-light.svg',
+    ])
+    const dark = readFileSync(join(ws.dir, 'codorna-card-dark.svg'), 'utf8')
+    expect(dark).toContain('Codorna Card of @Pixel-Dev')
+    expect(readFileSync(join(ws.dir, 'codorna-card-light.svg'), 'utf8')).toContain('#f7f0de')
 
     const outputs = readFileSync(ws.output, 'utf8')
     expect(outputs).toMatch(/^level<<ghadelimiter_/m)
@@ -105,7 +108,7 @@ describe('Action de ponta a ponta (API falsa)', () => {
       globalThis.fetch = originalFetch
     }
     expect(lines.at(-1)).toBe(
-      'ERROR "minha-org" é uma organização. O Guild Card é de pessoas: informe o seu login em `username`.',
+      'ERROR "minha-org" é uma organização. O Codorna Card é de pessoas: informe o seu login em `username`.',
     )
   })
 })

@@ -1,7 +1,7 @@
-# Guild Card: copie este arquivo para .github/workflows/guild-card.yml
+# Codorna Card: copie este arquivo para .github/workflows/codorna-card.yml
 # no repositório do seu perfil (o que tem o mesmo nome do seu usuário).
-# Copy this file to .github/workflows/guild-card.yml in your profile repository.
-name: Guild Card
+# Copy this file to .github/workflows/codorna-card.yml in your profile repository.
+name: Codorna Card
 
 on:
   schedule:
@@ -12,18 +12,18 @@ permissions:
   contents: write # para comitar o SVG / to commit the SVG
 
 concurrency:
-  group: guild-card
+  group: codorna-card
   cancel-in-progress: false
 
 jobs:
-  guild-card:
+  codorna-card:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: GabrielKoglin/guild-card@v1
+      - uses: GabrielKoglin/codorna-card@v1
         # Tudo opcional / everything is optional:
         # with:
         #   theme: both          # dark | light | both
         #   lang: en             # pt-BR | en
-        #   output: guild-card.svg
+        #   output: codorna-card.svg
         #   username: outro-login

@@ -1,7 +1,7 @@
 import { strings } from '../i18n'
 import type { Lang, PlayerData, RepoLanguages, YearActivity } from '../types'
 import type { GitHubClient } from './client'
-import { GuildCardError } from './errors'
+import { CodornaCardError } from './errors'
 import {
   PROFILE_QUERY,
   quartersQuery,
@@ -146,7 +146,7 @@ async function collectYear(
     to: window.to.toISOString(),
   })
   const collection = data.user?.contributionsCollection
-  if (!collection) throw new GuildCardError('not-found', t.errors.userNotFound(login))
+  if (!collection) throw new CodornaCardError('not-found', t.errors.userNotFound(login))
 
   let commits = commitDays(collection.commitContributionsByRepository)
   if (commits.incomplete) {
@@ -209,15 +209,15 @@ export async function collectPlayer(options: CollectOptions): Promise<PlayerData
       mergedElsewhere: `is:pr is:merged is:public author:${options.login} -user:${options.login}`,
     })
   } catch (error) {
-    if (error instanceof GuildCardError && error.code === 'not-found') {
-      throw new GuildCardError('not-found', t.errors.userNotFound(options.login))
+    if (error instanceof CodornaCardError && error.code === 'not-found') {
+      throw new CodornaCardError('not-found', t.errors.userNotFound(options.login))
     }
     throw error
   }
   const owner = profile.owner
-  if (!owner) throw new GuildCardError('not-found', t.errors.userNotFound(options.login))
+  if (!owner) throw new CodornaCardError('not-found', t.errors.userNotFound(options.login))
   if (owner.__typename !== 'User' || !owner.createdAt) {
-    throw new GuildCardError('not-user', t.errors.isOrganization(owner.login))
+    throw new CodornaCardError('not-user', t.errors.isOrganization(owner.login))
   }
   const login = owner.login
   const createdAt = new Date(owner.createdAt)

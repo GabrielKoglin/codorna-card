@@ -15,7 +15,7 @@ describe('entradas', () => {
     expect(readInputs(env({}))).toEqual({
       username: 'Pixel-Dev',
       token: 'segredo',
-      output: 'guild-card.svg',
+      output: 'codorna-card.svg',
       theme: 'dark',
       lang: 'pt-BR',
       commit: true,
@@ -56,7 +56,7 @@ describe('entradas', () => {
 
 describe('caminho de saída', () => {
   it('normaliza e protege o repositório', () => {
-    expect(normalizeOutput('')).toBe('guild-card.svg')
+    expect(normalizeOutput('')).toBe('codorna-card.svg')
     expect(normalizeOutput('img\\card.svg')).toBe('img/card.svg')
     expect(normalizeOutput('a/./b/../card.SVG')).toBe('a/card.SVG')
     expect(normalizeOutput('/etc/card.svg')).toBeNull()
@@ -68,12 +68,12 @@ describe('caminho de saída', () => {
   })
 
   it('both gera -dark e -light', () => {
-    expect(outputFiles('img/guild-card.svg', 'both')).toEqual([
-      { theme: 'dark', path: 'img/guild-card-dark.svg' },
-      { theme: 'light', path: 'img/guild-card-light.svg' },
+    expect(outputFiles('img/codorna-card.svg', 'both')).toEqual([
+      { theme: 'dark', path: 'img/codorna-card-dark.svg' },
+      { theme: 'light', path: 'img/codorna-card-light.svg' },
     ])
-    expect(outputFiles('guild-card.svg', 'light')).toEqual([
-      { theme: 'light', path: 'guild-card.svg' },
+    expect(outputFiles('codorna-card.svg', 'light')).toEqual([
+      { theme: 'light', path: 'codorna-card.svg' },
     ])
   })
 })

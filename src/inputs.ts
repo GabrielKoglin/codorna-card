@@ -1,6 +1,6 @@
 import { posix } from 'node:path'
 import { getInput, type Env } from './actions'
-import { GuildCardError } from './github/errors'
+import { CodornaCardError } from './github/errors'
 import { strings } from './i18n'
 import type { Lang, ThemeName } from './types'
 
@@ -33,7 +33,7 @@ function parseBoolean(value: string): boolean | null {
 
 /** Normaliza e valida o caminho de saída (relativo, dentro do repositório, terminado em .svg). */
 export function normalizeOutput(value: string): string | null {
-  const raw = (value || 'guild-card.svg').trim().replace(/\\/g, '/')
+  const raw = (value || 'codorna-card.svg').trim().replace(/\\/g, '/')
   if (raw.startsWith('/') || /^[a-z]:/i.test(raw)) return null
   const normalized = posix.normalize(raw).replace(/^\.\//, '')
   if (normalized === '..' || normalized.startsWith('../') || normalized.includes('/../'))
@@ -62,7 +62,7 @@ export function readInputs(env: Env): Inputs {
   const langInput = getInput(env, 'lang')
   const lang = parseLang(langInput)
   if (!lang) {
-    throw new GuildCardError(
+    throw new CodornaCardError(
       'input',
       `${strings('pt-BR').errors.invalidLang(langInput)} / ${strings('en').errors.invalidLang(langInput)}`,
     )
@@ -71,24 +71,24 @@ export function readInputs(env: Env): Inputs {
 
   const username = getInput(env, 'username') || (env.GITHUB_REPOSITORY_OWNER ?? '').trim()
   if (!LOGIN_PATTERN.test(username))
-    throw new GuildCardError('input', t.errors.invalidUsername(username))
+    throw new CodornaCardError('input', t.errors.invalidUsername(username))
 
   const token = getInput(env, 'token')
-  if (!token) throw new GuildCardError('input', t.errors.missingToken)
+  if (!token) throw new CodornaCardError('input', t.errors.missingToken)
 
   const outputInput = getInput(env, 'output')
   const output = normalizeOutput(outputInput)
-  if (!output) throw new GuildCardError('input', t.errors.invalidOutput(outputInput))
+  if (!output) throw new CodornaCardError('input', t.errors.invalidOutput(outputInput))
 
   const themeInput = getInput(env, 'theme').toLowerCase() || 'dark'
   if (themeInput !== 'dark' && themeInput !== 'light' && themeInput !== 'both') {
-    throw new GuildCardError('input', t.errors.invalidTheme(themeInput))
+    throw new CodornaCardError('input', t.errors.invalidTheme(themeInput))
   }
 
   const commitInput = getInput(env, 'commit')
   const commit = commitInput === '' ? true : parseBoolean(commitInput)
   if (commit === null)
-    throw new GuildCardError('input', t.errors.invalidBoolean('commit', commitInput))
+    throw new CodornaCardError('input', t.errors.invalidBoolean('commit', commitInput))
 
   return { username, token, output, theme: themeInput, lang, commit }
 }

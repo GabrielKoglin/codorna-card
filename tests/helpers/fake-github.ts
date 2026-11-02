@@ -1,6 +1,6 @@
 /**
  * API do GitHub de mentira para os testes: responde às consultas GraphQL do
- * Guild Card (pelo nome da operação) e às chamadas REST usadas no commit.
+ * Codorna Card (pelo nome da operação) e às chamadas REST usadas no commit.
  */
 
 export interface FakeRepo {
@@ -121,7 +121,7 @@ export function fakeGitHub(options: FakeOptions) {
       const user = options.user ?? null
       const vars = body.variables as Record<string, string>
       switch (operation) {
-        case 'GuildProfile':
+        case 'CodornaProfile':
           return json(200, {
             data: {
               rateLimit: RATE,
@@ -136,7 +136,7 @@ export function fakeGitHub(options: FakeOptions) {
               mergedElsewhere: { issueCount: user?.mergedElsewhere ?? 0 },
             },
           })
-        case 'GuildRepositories': {
+        case 'CodornaRepositories': {
           const page = Number(vars.cursor ?? 0)
           const repos = user?.repositories ?? []
           const slice = repos.slice(page * 100, page * 100 + 100)
@@ -162,7 +162,7 @@ export function fakeGitHub(options: FakeOptions) {
             },
           })
         }
-        case 'GuildYear': {
+        case 'CodornaYear': {
           if (!user) return json(200, { data: { rateLimit: RATE, user: null } })
           return json(200, {
             data: {
@@ -178,7 +178,7 @@ export function fakeGitHub(options: FakeOptions) {
             },
           })
         }
-        case 'GuildQuarters': {
+        case 'CodornaQuarters': {
           if (!user) return json(200, { data: { rateLimit: RATE, user: null } })
           const result: Record<string, unknown> = {}
           for (let i = 0; vars[`from${i}`]; i++) {

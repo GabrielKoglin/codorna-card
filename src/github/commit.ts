@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { strings } from '../i18n'
 import type { Lang } from '../types'
 import type { GitHubClient } from './client'
-import { GuildCardError } from './errors'
+import { CodornaCardError } from './errors'
 
 export interface CommitFile {
   /** Caminho dentro do repositório, com barras normais. */
@@ -57,22 +57,22 @@ export async function commitFiles(options: CommitOptions, attempt = 1): Promise<
 
   const fail = (status: number, message: string, writing: boolean): never => {
     if (status === 409 || /repository is empty/i.test(message)) {
-      throw new GuildCardError('empty-repository', t.errors.emptyRepository)
+      throw new CodornaCardError('empty-repository', t.errors.emptyRepository)
     }
     if (/protected branch|branch protection|rule violations|repository rule/i.test(message)) {
-      throw new GuildCardError('protected-branch', t.errors.protectedBranch(branch))
+      throw new CodornaCardError('protected-branch', t.errors.protectedBranch(branch))
     }
     if (status === 403 || (writing && status === 404)) {
-      throw new GuildCardError('permission', t.errors.noWritePermission)
+      throw new CodornaCardError('permission', t.errors.noWritePermission)
     }
-    throw new GuildCardError('api', t.errors.api(status, message))
+    throw new CodornaCardError('api', t.errors.api(status, message))
   }
 
   const ref = await client.rest<{ object: { sha: string } }>(
     'GET',
     `${base}/git/ref/heads/${encodePath(branch)}`,
   )
-  if (ref.status === 404) throw new GuildCardError('branch', t.errors.branchNotFound(branch))
+  if (ref.status === 404) throw new CodornaCardError('branch', t.errors.branchNotFound(branch))
   if (ref.status !== 200 || !ref.data) fail(ref.status, ref.message, false)
   const parentSha = ref.data?.object.sha ?? ''
 

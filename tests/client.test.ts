@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { GitHubClient } from '../src/github/client'
-import { GuildCardError } from '../src/github/errors'
+import { CodornaCardError } from '../src/github/errors'
 
 const ok = (data: unknown) => new Response(JSON.stringify({ data }), { status: 200 })
 
@@ -23,11 +23,11 @@ function client(responses: (() => Response | Promise<Response>)[], lang: 'pt-BR'
   return { instance, fetchMock, sleep, warn }
 }
 
-async function failure(promise: Promise<unknown>): Promise<GuildCardError> {
+async function failure(promise: Promise<unknown>): Promise<CodornaCardError> {
   try {
     await promise
   } catch (error) {
-    if (error instanceof GuildCardError) return error
+    if (error instanceof CodornaCardError) return error
     throw error
   }
   throw new Error('era para falhar')

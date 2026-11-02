@@ -1,4 +1,4 @@
-name: Guild Card
+name: Codorna Card
 description: 'Transforma sua atividade pública no GitHub em um card de RPG em pixel art (nível, XP, classe e atributos) para o README.'
 author: Gabriel Koglin
 branding:
@@ -17,7 +17,7 @@ inputs:
   output:
     description: 'Caminho do SVG dentro do repositório. Com theme both, vira <nome>-dark.svg e <nome>-light.svg.'
     required: false
-    default: guild-card.svg
+    default: codorna-card.svg
   theme:
     description: 'dark, light ou both (gera os dois arquivos para usar com <picture>).'
     required: false

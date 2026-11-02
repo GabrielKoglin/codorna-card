@@ -19,8 +19,8 @@ export function seededRandom(seed: Uint8Array, salt = 0): () => number {
   }
 }
 
-/** Número da carteirinha da guilda, ex.: "4F2A-91C3". */
-export function guildNumber(hash: Uint8Array): string {
+/** Número da carteirinha, ex.: "4F2A-91C3". */
+export function cardNumber(hash: Uint8Array): string {
   const hex = [...hash.slice(-4)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return `${hex.slice(0, 4)}-${hex.slice(4)}`.toUpperCase()
 }

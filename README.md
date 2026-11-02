@@ -2,10 +2,10 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="examples/veterano-dark-pt-BR.svg">
-  <img alt="Guild Card de exemplo: @demo-veterano, nível 40, Ferreiro, patente Mestre" src="examples/veterano-light-pt-BR.svg" width="640">
+  <img alt="Codorna Card de exemplo: @demo-veterano, nível 40, Ferreiro, patente Mestre" src="examples/veterano-light-pt-BR.svg" width="640">
 </picture>
 
-# Guild Card
+# Codorna Card
 
 **Sua atividade pública no GitHub vira um card de RPG em pixel art no README do seu perfil.**
 
@@ -35,20 +35,20 @@ dado sai do GitHub.
 ### Instalação em um passo
 
 No repositório do seu perfil (aquele com o mesmo nome do seu usuário, `seu-usuario/seu-usuario`),
-copie [`examples/workflow.yml`](examples/workflow.yml) para `.github/workflows/guild-card.yml`.
+copie [`examples/workflow.yml`](examples/workflow.yml) para `.github/workflows/codorna-card.yml`.
 
-Pronto. O card é gerado todo dia e comitado como `guild-card.svg`. Para mostrar no README:
+Pronto. O card é gerado todo dia e comitado como `codorna-card.svg`. Para mostrar no README:
 
 ```markdown
-![Guild Card](guild-card.svg)
+![Codorna Card](codorna-card.svg)
 ```
 
-Não quer esperar o agendamento? Vá em **Actions → Guild Card → Run workflow**.
+Não quer esperar o agendamento? Vá em **Actions → Codorna Card → Run workflow**.
 
 O essencial do workflow é isto:
 
 ```yaml
-name: Guild Card
+name: Codorna Card
 on:
   schedule:
     - cron: '23 4 * * *'
@@ -56,27 +56,27 @@ on:
 permissions:
   contents: write
 jobs:
-  guild-card:
+  codorna-card:
     runs-on: ubuntu-latest
     steps:
-      - uses: GabrielKoglin/guild-card@v1
+      - uses: GabrielKoglin/codorna-card@v1
 ```
 
 ### Tema claro e escuro
 
-Com `theme: both` a Action gera `guild-card-dark.svg` e `guild-card-light.svg`. Use os dois com
+Com `theme: both` a Action gera `codorna-card-dark.svg` e `codorna-card-light.svg`. Use os dois com
 `<picture>` e o GitHub escolhe o certo para o tema de quem visita:
 
 ```yaml
-- uses: GabrielKoglin/guild-card@v1
+- uses: GabrielKoglin/codorna-card@v1
   with:
     theme: both
 ```
 
 ```html
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="guild-card-dark.svg" />
-  <img alt="Meu Guild Card" src="guild-card-light.svg" />
+  <source media="(prefers-color-scheme: dark)" srcset="codorna-card-dark.svg" />
+  <img alt="Meu Codorna Card" src="codorna-card-light.svg" />
 </picture>
 ```
 
@@ -88,7 +88,7 @@ Os dois temas têm fundo próprio, então qualquer um deles também fica legíve
 | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `username` | dono do repositório | Login do GitHub cuja atividade vira o card.                                                                                    |
 | `token`    | `GITHUB_TOKEN`      | Token para ler a API e comitar. O padrão basta; não precisa de token pessoal.                                                  |
-| `output`   | `guild-card.svg`    | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                  |
+| `output`   | `codorna-card.svg`  | Caminho do SVG no repositório. Com `theme: both` vira `<nome>-dark.svg` e `<nome>-light.svg`.                                  |
 | `theme`    | `dark`              | `dark`, `light` ou `both`.                                                                                                     |
 | `lang`     | `pt-BR`             | Idioma do card, dos logs e da mensagem de commit: `pt-BR` ou `en`.                                                             |
 | `commit`   | `true`              | Comita o SVG no repositório onde o workflow roda. Com `false`, só grava o arquivo no workspace (para você usar em outro step). |
@@ -191,34 +191,34 @@ It runs in your own repository once a day. No server, no sign-up, and no data le
 ### One-step install
 
 In your profile repository (the one named after your user, `your-user/your-user`), copy
-[`examples/workflow.yml`](examples/workflow.yml) to `.github/workflows/guild-card.yml`.
+[`examples/workflow.yml`](examples/workflow.yml) to `.github/workflows/codorna-card.yml`.
 
-That's it. The card is generated every day and committed as `guild-card.svg`. To show it in your
+That's it. The card is generated every day and committed as `codorna-card.svg`. To show it in your
 README:
 
 ```markdown
-![Guild Card](guild-card.svg)
+![Codorna Card](codorna-card.svg)
 ```
 
-Don't want to wait for the schedule? Go to **Actions → Guild Card → Run workflow**.
+Don't want to wait for the schedule? Go to **Actions → Codorna Card → Run workflow**.
 
 For an English card, add `lang: en`:
 
 ```yaml
-- uses: GabrielKoglin/guild-card@v1
+- uses: GabrielKoglin/codorna-card@v1
   with:
     lang: en
 ```
 
 ### Light and dark themes
 
-With `theme: both` the Action writes `guild-card-dark.svg` and `guild-card-light.svg`. Use them
+With `theme: both` the Action writes `codorna-card-dark.svg` and `codorna-card-light.svg`. Use them
 with `<picture>` and GitHub picks the right one for each visitor's theme:
 
 ```html
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="guild-card-dark.svg" />
-  <img alt="My Guild Card" src="guild-card-light.svg" />
+  <source media="(prefers-color-scheme: dark)" srcset="codorna-card-dark.svg" />
+  <img alt="My Codorna Card" src="codorna-card-light.svg" />
 </picture>
 ```
 
@@ -226,14 +226,14 @@ Both themes have their own background, so either one is also readable on its own
 
 ### Inputs
 
-| Input      | Default          | What it does                                                                                                                              |
-| ---------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `username` | repository owner | GitHub login whose activity becomes the card.                                                                                             |
-| `token`    | `GITHUB_TOKEN`   | Token to read the API and commit. The default is enough; no personal token needed.                                                        |
-| `output`   | `guild-card.svg` | SVG path in the repository. With `theme: both` it becomes `<name>-dark.svg` and `<name>-light.svg`.                                       |
-| `theme`    | `dark`           | `dark`, `light` or `both`.                                                                                                                |
-| `lang`     | `pt-BR`          | Language of the card, logs and commit message: `pt-BR` or `en`.                                                                           |
-| `commit`   | `true`           | Commits the SVG to the repository running the workflow. With `false`, it only writes the file to the workspace (for another step to use). |
+| Input      | Default            | What it does                                                                                                                              |
+| ---------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `username` | repository owner   | GitHub login whose activity becomes the card.                                                                                             |
+| `token`    | `GITHUB_TOKEN`     | Token to read the API and commit. The default is enough; no personal token needed.                                                        |
+| `output`   | `codorna-card.svg` | SVG path in the repository. With `theme: both` it becomes `<name>-dark.svg` and `<name>-light.svg`.                                       |
+| `theme`    | `dark`             | `dark`, `light` or `both`.                                                                                                                |
+| `lang`     | `pt-BR`            | Language of the card, logs and commit message: `pt-BR` or `en`.                                                                           |
+| `commit`   | `true`             | Commits the SVG to the repository running the workflow. With `false`, it only writes the file to the workspace (for another step to use). |
 
 Outputs: `level`, `xp`, `class`, `class-name`, `rank`, `files` and `committed`. The job summary
 shows the XP math line by line.
