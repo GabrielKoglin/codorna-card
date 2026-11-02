@@ -5,7 +5,7 @@ import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /***/ ((module, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
 
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
-/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(638);
+/* harmony import */ var _run__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(327);
 
 process.exitCode = await (0,_run__WEBPACK_IMPORTED_MODULE_0__/* .main */ .iW)();
 
@@ -14,7 +14,7 @@ __webpack_async_result__();
 
 /***/ }),
 
-/***/ 638:
+/***/ 327:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -79,83 +79,156 @@ function appendSummary(env, markdown) {
     (0,external_node_fs_namespaceObject.appendFileSync)(file, markdown + external_node_os_namespaceObject.EOL, 'utf8');
 }
 
-;// CONCATENATED MODULE: ./src/hash.ts
-
-/** SHA-256 do username em minúsculas: a semente fixa de tudo que é "aleatório" no card. */
-function loginHash(login) {
-    return new Uint8Array((0,external_node_crypto_namespaceObject.createHash)('sha256').update(login.trim().toLowerCase()).digest());
-}
-/** Gerador pseudoaleatório determinístico (mulberry32) a partir do hash. */
-function seededRandom(seed, salt = 0) {
-    let state = (((seed[0] ?? 0) << 24) | ((seed[1] ?? 0) << 16) | ((seed[2] ?? 0) << 8) | (seed[3] ?? 0)) ^
-        Math.imul(salt + 1, 0x9e3779b9);
-    return () => {
-        state = (state + 0x6d2b79f5) | 0;
-        let t = state;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
-/** Número da carteirinha, ex.: "4F2A-91C3". */
-function cardNumber(hash) {
-    const hex = [...hash.slice(-4)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    return `${hex.slice(0, 4)}-${hex.slice(4)}`.toUpperCase();
-}
-
-;// CONCATENATED MODULE: ./src/game/attributes.ts
-/** Ordem de exibição no card (duas colunas, de cima para baixo). */
-const ATTRIBUTES = [
-    { id: 'str', reference: 20_000, curve: 0.4, color: '#e4574c' },
-    { id: 'int', reference: 12, curve: 1, color: '#4b8fe0' },
-    { id: 'dex', reference: 2_000, curve: 0.4, color: '#4fb06a' },
-    { id: 'wis', reference: 2_000, curve: 0.4, color: '#9d74e8' },
-    { id: 'con', reference: 3_650, curve: 0.4, color: '#e98b2f' },
-    { id: 'cha', reference: 2_000, curve: 0.4, color: '#e06a9f' },
-];
-/** Tamanho mínimo (bytes de código) para um repositório contar em INT. */
-const MIN_REPO_BYTES = 1024;
-/** Converte uma quantidade em atributo de 1 a 99. */
-function attributeValue(amount, reference, curve = 0.4) {
-    if (!Number.isFinite(amount) || amount <= 0)
-        return 1;
-    const value = Math.round(99 * Math.min(1, amount / reference) ** curve);
-    return Math.min(99, Math.max(1, value));
-}
+;// CONCATENATED MODULE: ./src/game/rules.ts
 /**
- * Linguagens principais diferentes: em cada repositório (com pelo menos 1 KB de código)
- * a linguagem com mais bytes é a principal, como o GitHub mostra na página do repositório.
+ * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
+ * Os tetos existem para que volume artificial (farm) não vire nível.
  */
-function mainLanguages(repositories) {
-    const found = new Map();
-    for (const repo of repositories) {
-        const languages = repo.languages.filter((lang) => Number.isFinite(lang.size) && lang.size > 0);
-        const total = languages.reduce((sum, lang) => sum + lang.size, 0);
-        if (total < MIN_REPO_BYTES)
-            continue;
-        const main = languages.reduce((best, lang) => (lang.size > best.size ? lang : best));
-        found.set(main.name.toLowerCase(), main.name);
-    }
-    return [...found.values()];
+const XP_RULES = {
+    /** Cada commit vale 2 XP, mas só os 10 primeiros de cada dia contam. */
+    commit: { xp: 2, dailyCap: 10 },
+    /** Cada issue aberta vale 4 XP, até 150 por ano. */
+    issue: { xp: 4, yearlyCap: 150 },
+    /** Cada PR aberto vale 5 XP, até 250 por ano. */
+    pullRequest: { xp: 5, yearlyCap: 250 },
+    /** Cada PR revisado vale 8 XP, até 250 por ano. */
+    review: { xp: 8, yearlyCap: 250 },
+    /** Cada PR mesclado vale +10 XP (nunca mais PRs mesclados do que PRs abertos contados). */
+    mergedPullRequest: { xp: 10 },
+    /** Bônus de +10 XP quando o PR mesclado é no repositório de outra pessoa. */
+    mergedElsewhereBonus: { xp: 10 },
+    /**
+     * Opcional (`private-contributions: true`): cada contribuição privada que o GitHub mostra no
+     * perfil vale 1 XP, até 1.000 por ano. Vale metade de um commit porque o número mistura todos
+     * os tipos, não passa pelo teto diário e ninguém de fora consegue conferir.
+     */
+    privateContribution: { xp: 1, yearlyCap: 1000 },
+};
+/** Nível máximo. */
+const MAX_LEVEL = 99;
+/** XP total para chegar ao nível N = LEVEL_FACTOR × (N − 1)². */
+const LEVEL_FACTOR = 50;
+/** Patentes por faixa de nível (a moldura do card muda de material em cada uma). */
+const RANKS = [
+    { id: 'recruit', minLevel: 1 },
+    { id: 'apprentice', minLevel: 5 },
+    { id: 'veteran', minLevel: 15 },
+    { id: 'master', minLevel: 30 },
+    { id: 'legend', minLevel: 50 },
+    { id: 'mythic', minLevel: 75 },
+];
+function whole(n) {
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
-/** Quantidade bruta que alimenta cada atributo. */
-function attributeSources(activity, repositories) {
+/** Aplica o teto diário de commits. */
+function summarizeCommits(commitsByDay, dailyCap = XP_RULES.commit.dailyCap) {
+    const summary = { raw: 0, counted: 0, activeDays: 0, cappedDays: 0 };
+    for (const value of Object.values(commitsByDay)) {
+        const commits = whole(value);
+        if (commits === 0)
+            continue;
+        summary.raw += commits;
+        summary.counted += Math.min(commits, dailyCap);
+        summary.activeDays += 1;
+        if (commits > dailyCap)
+            summary.cappedDays += 1;
+    }
+    return summary;
+}
+/** Junta a atividade de todos os anos aplicando os tetos de cada tipo. */
+function countActivity(data) {
+    const commitsByDay = {};
+    const issues = { raw: 0, counted: 0 };
+    const pullRequests = { raw: 0, counted: 0 };
+    const reviews = { raw: 0, counted: 0 };
+    const privateContributions = { raw: 0, counted: 0 };
+    for (const year of data.years) {
+        for (const [day, value] of Object.entries(year.commitsByDay)) {
+            commitsByDay[day] = (commitsByDay[day] ?? 0) + whole(value);
+        }
+        const yearIssues = whole(year.issues);
+        const yearPullRequests = whole(year.pullRequests);
+        const yearReviews = whole(year.reviews);
+        issues.raw += yearIssues;
+        issues.counted += Math.min(yearIssues, XP_RULES.issue.yearlyCap);
+        pullRequests.raw += yearPullRequests;
+        pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap);
+        reviews.raw += yearReviews;
+        reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap);
+        const yearPrivate = whole(year.privateContributions ?? 0);
+        privateContributions.raw += yearPrivate;
+        privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap);
+    }
+    const mergedRaw = whole(data.mergedPullRequests);
+    const mergedCounted = Math.min(mergedRaw, pullRequests.counted);
+    const elsewhereRaw = Math.min(whole(data.mergedPullRequestsElsewhere), mergedRaw);
     return {
-        str: activity.commits.counted,
-        dex: activity.merged.counted,
-        con: activity.commits.activeDays,
-        int: mainLanguages(repositories).length,
-        wis: activity.reviews.counted,
-        cha: activity.issues.counted + 2 * activity.mergedElsewhere.counted,
+        commits: summarizeCommits(commitsByDay),
+        issues,
+        pullRequests,
+        reviews,
+        merged: { raw: mergedRaw, counted: mergedCounted },
+        mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
+        privateContributions,
     };
 }
-function computeAttributes(activity, repositories) {
-    const sources = attributeSources(activity, repositories);
-    const result = {};
-    for (const def of ATTRIBUTES) {
-        result[def.id] = attributeValue(sources[def.id], def.reference, def.curve);
+function computeXp(activity) {
+    const commits = activity.commits.counted * XP_RULES.commit.xp;
+    const issues = activity.issues.counted * XP_RULES.issue.xp;
+    const pullRequests = activity.pullRequests.counted * XP_RULES.pullRequest.xp;
+    const reviews = activity.reviews.counted * XP_RULES.review.xp;
+    const merged = activity.merged.counted * XP_RULES.mergedPullRequest.xp;
+    const mergedElsewhere = activity.mergedElsewhere.counted * XP_RULES.mergedElsewhereBonus.xp;
+    const privateContributions = activity.privateContributions.counted * XP_RULES.privateContribution.xp;
+    return {
+        commits,
+        issues,
+        pullRequests,
+        reviews,
+        merged,
+        mergedElsewhere,
+        privateContributions,
+        total: commits + issues + pullRequests + reviews + merged + mergedElsewhere + privateContributions,
+    };
+}
+/** XP total necessário para chegar a um nível. */
+function xpForLevel(level) {
+    const clamped = Math.min(Math.max(Math.floor(level), 1), MAX_LEVEL);
+    return LEVEL_FACTOR * (clamped - 1) ** 2;
+}
+function levelForXp(xp) {
+    const total = whole(xp);
+    let level = Math.min(MAX_LEVEL, Math.floor(1 + Math.sqrt(total / LEVEL_FACTOR)));
+    // Corrige possíveis erros de arredondamento da raiz quadrada.
+    while (level < MAX_LEVEL && xpForLevel(level + 1) <= total)
+        level += 1;
+    while (level > 1 && xpForLevel(level) > total)
+        level -= 1;
+    return level;
+}
+function levelProgress(xp) {
+    const total = whole(xp);
+    const level = levelForXp(total);
+    const levelStart = xpForLevel(level);
+    if (level >= MAX_LEVEL) {
+        return { level, xp: total, levelStart, nextLevel: null, progress: 1 };
     }
-    return result;
+    const nextLevel = xpForLevel(level + 1);
+    return {
+        level,
+        xp: total,
+        levelStart,
+        nextLevel,
+        progress: (total - levelStart) / (nextLevel - levelStart),
+    };
+}
+function rankForLevel(level) {
+    let rank = 'recruit';
+    for (const entry of RANKS) {
+        if (level >= entry.minLevel)
+            rank = entry.id;
+    }
+    return rank;
 }
 
 ;// CONCATENATED MODULE: ./src/game/classes.ts
@@ -520,178 +593,78 @@ function dominantClass(shares) {
     return best;
 }
 
-;// CONCATENATED MODULE: ./src/game/rules.ts
-/**
- * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.
- * Os tetos existem para que volume artificial (farm) não vire nível.
- */
-const XP_RULES = {
-    /** Cada commit vale 2 XP, mas só os 10 primeiros de cada dia contam. */
-    commit: { xp: 2, dailyCap: 10 },
-    /** Cada issue aberta vale 4 XP, até 150 por ano. */
-    issue: { xp: 4, yearlyCap: 150 },
-    /** Cada PR aberto vale 5 XP, até 250 por ano. */
-    pullRequest: { xp: 5, yearlyCap: 250 },
-    /** Cada PR revisado vale 8 XP, até 250 por ano. */
-    review: { xp: 8, yearlyCap: 250 },
-    /** Cada PR mesclado vale +10 XP (nunca mais PRs mesclados do que PRs abertos contados). */
-    mergedPullRequest: { xp: 10 },
-    /** Bônus de +10 XP quando o PR mesclado é no repositório de outra pessoa. */
-    mergedElsewhereBonus: { xp: 10 },
-    /**
-     * Opcional (`private-contributions: true`): cada contribuição privada que o GitHub mostra no
-     * perfil vale 1 XP, até 1.000 por ano. Vale metade de um commit porque o número mistura todos
-     * os tipos, não passa pelo teto diário e ninguém de fora consegue conferir.
-     */
-    privateContribution: { xp: 1, yearlyCap: 1000 },
-};
-/** Nível máximo. */
-const MAX_LEVEL = 99;
-/** XP total para chegar ao nível N = LEVEL_FACTOR × (N − 1)². */
-const LEVEL_FACTOR = 50;
-/** Patentes por faixa de nível (a moldura do card muda de material em cada uma). */
-const RANKS = [
-    { id: 'recruit', minLevel: 1 },
-    { id: 'apprentice', minLevel: 5 },
-    { id: 'veteran', minLevel: 15 },
-    { id: 'master', minLevel: 30 },
-    { id: 'legend', minLevel: 50 },
-    { id: 'mythic', minLevel: 75 },
+;// CONCATENATED MODULE: ./src/game/attributes.ts
+/** Ordem de exibição no card (duas colunas, de cima para baixo). */
+const ATTRIBUTES = [
+    { id: 'str', reference: 20_000, curve: 0.4, color: '#e4574c' },
+    { id: 'int', reference: 12, curve: 1, color: '#4b8fe0' },
+    { id: 'dex', reference: 2_000, curve: 0.4, color: '#4fb06a' },
+    { id: 'wis', reference: 2_000, curve: 0.4, color: '#9d74e8' },
+    { id: 'con', reference: 3_650, curve: 0.4, color: '#e98b2f' },
+    { id: 'cha', reference: 2_000, curve: 0.4, color: '#e06a9f' },
 ];
-function whole(n) {
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+/** Tamanho mínimo (bytes de código) para um repositório contar em INT. */
+const MIN_REPO_BYTES = 1024;
+/** Converte uma quantidade em atributo de 1 a 99. */
+function attributeValue(amount, reference, curve = 0.4) {
+    if (!Number.isFinite(amount) || amount <= 0)
+        return 1;
+    const value = Math.round(99 * Math.min(1, amount / reference) ** curve);
+    return Math.min(99, Math.max(1, value));
 }
-/** Aplica o teto diário de commits. */
-function summarizeCommits(commitsByDay, dailyCap = XP_RULES.commit.dailyCap) {
-    const summary = { raw: 0, counted: 0, activeDays: 0, cappedDays: 0 };
-    for (const value of Object.values(commitsByDay)) {
-        const commits = whole(value);
-        if (commits === 0)
+/**
+ * Linguagens principais diferentes: em cada repositório (com pelo menos 1 KB de código)
+ * a linguagem com mais bytes é a principal, como o GitHub mostra na página do repositório.
+ */
+function mainLanguages(repositories) {
+    const found = new Map();
+    for (const repo of repositories) {
+        const languages = repo.languages.filter((lang) => Number.isFinite(lang.size) && lang.size > 0);
+        const total = languages.reduce((sum, lang) => sum + lang.size, 0);
+        if (total < MIN_REPO_BYTES)
             continue;
-        summary.raw += commits;
-        summary.counted += Math.min(commits, dailyCap);
-        summary.activeDays += 1;
-        if (commits > dailyCap)
-            summary.cappedDays += 1;
+        const main = languages.reduce((best, lang) => (lang.size > best.size ? lang : best));
+        found.set(main.name.toLowerCase(), main.name);
     }
-    return summary;
+    return [...found.values()];
 }
-/** Junta a atividade de todos os anos aplicando os tetos de cada tipo. */
-function countActivity(data) {
-    const commitsByDay = {};
-    const issues = { raw: 0, counted: 0 };
-    const pullRequests = { raw: 0, counted: 0 };
-    const reviews = { raw: 0, counted: 0 };
-    const privateContributions = { raw: 0, counted: 0 };
-    for (const year of data.years) {
-        for (const [day, value] of Object.entries(year.commitsByDay)) {
-            commitsByDay[day] = (commitsByDay[day] ?? 0) + whole(value);
-        }
-        const yearIssues = whole(year.issues);
-        const yearPullRequests = whole(year.pullRequests);
-        const yearReviews = whole(year.reviews);
-        issues.raw += yearIssues;
-        issues.counted += Math.min(yearIssues, XP_RULES.issue.yearlyCap);
-        pullRequests.raw += yearPullRequests;
-        pullRequests.counted += Math.min(yearPullRequests, XP_RULES.pullRequest.yearlyCap);
-        reviews.raw += yearReviews;
-        reviews.counted += Math.min(yearReviews, XP_RULES.review.yearlyCap);
-        const yearPrivate = whole(year.privateContributions ?? 0);
-        privateContributions.raw += yearPrivate;
-        privateContributions.counted += Math.min(yearPrivate, XP_RULES.privateContribution.yearlyCap);
-    }
-    const mergedRaw = whole(data.mergedPullRequests);
-    const mergedCounted = Math.min(mergedRaw, pullRequests.counted);
-    const elsewhereRaw = Math.min(whole(data.mergedPullRequestsElsewhere), mergedRaw);
+/** Quantidade bruta que alimenta cada atributo. */
+function attributeSources(activity, repositories) {
     return {
-        commits: summarizeCommits(commitsByDay),
-        issues,
-        pullRequests,
-        reviews,
-        merged: { raw: mergedRaw, counted: mergedCounted },
-        mergedElsewhere: { raw: elsewhereRaw, counted: Math.min(elsewhereRaw, mergedCounted) },
-        privateContributions,
+        str: activity.commits.counted,
+        dex: activity.merged.counted,
+        con: activity.commits.activeDays,
+        int: mainLanguages(repositories).length,
+        wis: activity.reviews.counted,
+        cha: activity.issues.counted + 2 * activity.mergedElsewhere.counted,
     };
 }
-function computeXp(activity) {
-    const commits = activity.commits.counted * XP_RULES.commit.xp;
-    const issues = activity.issues.counted * XP_RULES.issue.xp;
-    const pullRequests = activity.pullRequests.counted * XP_RULES.pullRequest.xp;
-    const reviews = activity.reviews.counted * XP_RULES.review.xp;
-    const merged = activity.merged.counted * XP_RULES.mergedPullRequest.xp;
-    const mergedElsewhere = activity.mergedElsewhere.counted * XP_RULES.mergedElsewhereBonus.xp;
-    const privateContributions = activity.privateContributions.counted * XP_RULES.privateContribution.xp;
-    return {
-        commits,
-        issues,
-        pullRequests,
-        reviews,
-        merged,
-        mergedElsewhere,
-        privateContributions,
-        total: commits + issues + pullRequests + reviews + merged + mergedElsewhere + privateContributions,
-    };
-}
-/** XP total necessário para chegar a um nível. */
-function xpForLevel(level) {
-    const clamped = Math.min(Math.max(Math.floor(level), 1), MAX_LEVEL);
-    return LEVEL_FACTOR * (clamped - 1) ** 2;
-}
-function levelForXp(xp) {
-    const total = whole(xp);
-    let level = Math.min(MAX_LEVEL, Math.floor(1 + Math.sqrt(total / LEVEL_FACTOR)));
-    // Corrige possíveis erros de arredondamento da raiz quadrada.
-    while (level < MAX_LEVEL && xpForLevel(level + 1) <= total)
-        level += 1;
-    while (level > 1 && xpForLevel(level) > total)
-        level -= 1;
-    return level;
-}
-function levelProgress(xp) {
-    const total = whole(xp);
-    const level = levelForXp(total);
-    const levelStart = xpForLevel(level);
-    if (level >= MAX_LEVEL) {
-        return { level, xp: total, levelStart, nextLevel: null, progress: 1 };
+function computeAttributes(activity, repositories) {
+    const sources = attributeSources(activity, repositories);
+    const result = {};
+    for (const def of ATTRIBUTES) {
+        result[def.id] = attributeValue(sources[def.id], def.reference, def.curve);
     }
-    const nextLevel = xpForLevel(level + 1);
-    return {
-        level,
-        xp: total,
-        levelStart,
-        nextLevel,
-        progress: (total - levelStart) / (nextLevel - levelStart),
-    };
-}
-function rankForLevel(level) {
-    let rank = 'recruit';
-    for (const entry of RANKS) {
-        if (level >= entry.minLevel)
-            rank = entry.id;
-    }
-    return rank;
+    return result;
 }
 
-;// CONCATENATED MODULE: ./src/game/character.ts
+;// CONCATENATED MODULE: ./src/game/sheet.ts
 
 
 
-
-function buildCharacter(data) {
+/** Repositórios que votam na classe e contam em INT. */
+function languageRepositories(data) {
+    return [...data.repositories];
+}
+/** Calcula a ficha completa. Determinística: os mesmos dados sempre dão a mesma ficha. */
+function buildSheet(data) {
     const activity = countActivity(data);
     const xp = computeXp(activity);
     const level = levelProgress(xp.total);
-    const languages = languageShares(data.repositories);
+    const repositories = languageRepositories(data);
+    const languages = languageShares(repositories);
     const dominant = dominantClass(languages);
-    const hash = loginHash(data.login);
-    const created = new Date(data.createdAt);
     return {
-        login: data.login,
-        memberSince: Number.isNaN(created.getTime())
-            ? new Date().getUTCFullYear()
-            : created.getUTCFullYear(),
-        cardNumber: cardNumber(hash),
-        hash,
         activity,
         xp,
         level,
@@ -699,7 +672,83 @@ function buildCharacter(data) {
         classId: dominant.classId,
         classLanguage: dominant.language,
         languages,
-        attributes: computeAttributes(activity, data.repositories),
+        attributes: computeAttributes(activity, repositories),
+    };
+}
+
+;// CONCATENATED MODULE: ./src/game/index.ts
+/**
+ * Regras do Codorna Card: XP, nível, patente, classe e atributos.
+ *
+ * Este é o ponto de entrada das regras. O módulo é puro: não faz I/O, não lê relógio, ambiente
+ * nem rede, não conhece a API do GitHub e só importa arquivos da própria pasta (um teste em
+ * `tests/game-api.test.ts` confere isso). Foi pensado para virar, sem mudança, um pacote
+ * compartilhado com o jogo Codorna.
+ *
+ * Como usar:
+ *
+ * ```ts
+ * import { buildSheet, type PlayerData } from './game'
+ *
+ * const sheet = buildSheet(data) // data: PlayerData (da coleta, de uma fixture ou do jogo)
+ * sheet.level.level // 1 a 99
+ * sheet.rank // 'recruit' … 'mythic'
+ * sheet.classId // 'blacksmith', 'illusionist', …
+ * sheet.attributes.str // 1 a 99
+ * sheet.xp.total
+ * ```
+ *
+ * Para mostrar só uma parte (por exemplo, o XP de uma atividade nova no jogo), as peças estão
+ * exportadas uma a uma: `countActivity` aplica os tetos, `computeXp` soma o XP, `levelProgress`
+ * dá o nível, `rankForLevel` a patente, `languageShares` + `dominantClass` a classe e
+ * `computeAttributes` os atributos.
+ *
+ * As regras estão descritas em `docs/regras.md` (pt-BR) e `docs/rules.md` (en). Mudança de regra
+ * precisa atualizar os dois documentos e os testes.
+ */
+
+
+
+
+
+;// CONCATENATED MODULE: ./src/hash.ts
+
+/** SHA-256 do username em minúsculas: a semente fixa de tudo que é "aleatório" no card. */
+function loginHash(login) {
+    return new Uint8Array((0,external_node_crypto_namespaceObject.createHash)('sha256').update(login.trim().toLowerCase()).digest());
+}
+/** Gerador pseudoaleatório determinístico (mulberry32) a partir do hash. */
+function seededRandom(seed, salt = 0) {
+    let state = (((seed[0] ?? 0) << 24) | ((seed[1] ?? 0) << 16) | ((seed[2] ?? 0) << 8) | (seed[3] ?? 0)) ^
+        Math.imul(salt + 1, 0x9e3779b9);
+    return () => {
+        state = (state + 0x6d2b79f5) | 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+/** Número da carteirinha, ex.: "4F2A-91C3". */
+function cardNumber(hash) {
+    const hex = [...hash.slice(-4)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 4)}-${hex.slice(4)}`.toUpperCase();
+}
+
+;// CONCATENATED MODULE: ./src/character.ts
+
+
+function buildCharacter(data) {
+    const hash = loginHash(data.login);
+    const created = new Date(data.createdAt);
+    return {
+        ...buildSheet(data),
+        login: data.login,
+        memberSince: Number.isNaN(created.getTime())
+            ? new Date().getUTCFullYear()
+            : created.getUTCFullYear(),
+        cardNumber: cardNumber(hash),
+        hash,
     };
 }
 

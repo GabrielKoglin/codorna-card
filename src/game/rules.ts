@@ -1,4 +1,4 @@
-import type { PlayerData } from '../types'
+import type { PlayerData } from './types'
 
 /**
  * Tabela de XP. Toda mudança aqui precisa ser refletida em `docs/regras.md` e `docs/rules.md`.

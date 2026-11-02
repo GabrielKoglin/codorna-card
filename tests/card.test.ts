@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { buildCharacter } from '../src/game/character'
+import { buildCharacter } from '../src/character'
 import { CLASSES } from '../src/game/classes'
 import { RANKS } from '../src/game/rules'
 import { compactNumber, strings } from '../src/i18n'

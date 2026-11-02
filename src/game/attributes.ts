@@ -1,5 +1,5 @@
-import type { RepoLanguages } from '../types'
 import type { CountedActivity } from './rules'
+import type { AnonymousRepo } from './types'
 
 export type AttributeId = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 
@@ -39,7 +39,7 @@ export function attributeValue(amount: number, reference: number, curve = 0.4): 
  * Linguagens principais diferentes: em cada repositório (com pelo menos 1 KB de código)
  * a linguagem com mais bytes é a principal, como o GitHub mostra na página do repositório.
  */
-export function mainLanguages(repositories: readonly RepoLanguages[]): string[] {
+export function mainLanguages(repositories: readonly AnonymousRepo[]): string[] {
   const found = new Map<string, string>()
   for (const repo of repositories) {
     const languages = repo.languages.filter((lang) => Number.isFinite(lang.size) && lang.size > 0)
@@ -54,7 +54,7 @@ export function mainLanguages(repositories: readonly RepoLanguages[]): string[] 
 /** Quantidade bruta que alimenta cada atributo. */
 export function attributeSources(
   activity: CountedActivity,
-  repositories: readonly RepoLanguages[],
+  repositories: readonly AnonymousRepo[],
 ): Record<AttributeId, number> {
   return {
     str: activity.commits.counted,
@@ -68,7 +68,7 @@ export function attributeSources(
 
 export function computeAttributes(
   activity: CountedActivity,
-  repositories: readonly RepoLanguages[],
+  repositories: readonly AnonymousRepo[],
 ): Attributes {
   const sources = attributeSources(activity, repositories)
   const result = {} as Attributes

@@ -5,7 +5,7 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
-import { buildCharacter, type Character } from '../../src/game/character'
+import { buildCharacter, type Character } from '../../src/character'
 import { GitHubClient } from '../../src/github/client'
 import { collectPlayer } from '../../src/github/collect'
 import { CodornaCardError } from '../../src/github/errors'

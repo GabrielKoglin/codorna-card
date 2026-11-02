@@ -1,4 +1,4 @@
-import type { RepoLanguages } from '../types'
+import type { AnonymousRepo } from './types'
 
 export type ClassId =
   | 'blacksmith'
@@ -341,7 +341,7 @@ export interface LanguageShare {
  * Cada repositório com código vale um voto, dividido entre as linguagens dele
  * na proporção do tamanho em bytes. Assim um repositório gigante não engole os outros.
  */
-export function languageShares(repositories: readonly RepoLanguages[]): LanguageShare[] {
+export function languageShares(repositories: readonly AnonymousRepo[]): LanguageShare[] {
   const votes = new Map<string, { name: string; color: string | null; votes: number }>()
   let voters = 0
   for (const repo of repositories) {

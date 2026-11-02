@@ -1,5 +1,5 @@
 import { ATTRIBUTES } from '../game/attributes'
-import type { Character } from '../game/character'
+import type { Character } from '../character'
 import { classDef } from '../game/classes'
 import { seededRandom } from '../hash'
 import { formatNumber, strings } from '../i18n'

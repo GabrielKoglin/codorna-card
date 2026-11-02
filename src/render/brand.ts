@@ -2,7 +2,7 @@
  * Arte do projeto (não entra na Action): logo, mascote sozinho e prévia social. Tudo com a
  * codorna, a fonte e as cores do próprio Codorna Card, gerado por código.
  */
-import type { Character } from '../game/character'
+import type { Character } from '../character'
 import type { Lang, ThemeName } from '../types'
 import { Canvas } from './canvas'
 import { CARD_HEIGHT, CARD_WIDTH, drawCard } from './card'

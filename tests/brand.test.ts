@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { levelUpFrames } from '../scripts/lib/level-up'
 import { rasterizeSvg } from '../scripts/lib/raster'
-import { buildCharacter } from '../src/game/character'
+import { buildCharacter } from '../src/character'
 import {
   renderLogo,
   renderMascot,

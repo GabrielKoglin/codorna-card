@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { appendSummary, consoleLogger, setOutput, type Env, type Logger } from './actions'
-import { buildCharacter, type Character } from './game/character'
+import { buildCharacter, type Character } from './character'
 import { GitHubClient } from './github/client'
 import { collectPlayer } from './github/collect'
 import { commitFiles } from './github/commit'

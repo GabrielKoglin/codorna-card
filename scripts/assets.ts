@@ -7,7 +7,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildCharacter } from '../src/game/character'
+import { buildCharacter } from '../src/character'
 import { renderLogo, renderMascot, renderSocialPreview } from '../src/render/brand'
 import { renderCard } from '../src/render/card'
 import type { Lang, PlayerData, ThemeName } from '../src/types'

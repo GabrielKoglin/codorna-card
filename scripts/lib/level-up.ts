@@ -4,7 +4,7 @@
  * contagens); classe, avatar e linguagens são os do card final.
  */
 import { ATTRIBUTES, type Attributes } from '../../src/game/attributes'
-import type { Character } from '../../src/game/character'
+import type { Character } from '../../src/character'
 import { levelProgress, RANKS, rankForLevel, xpForLevel } from '../../src/game/rules'
 
 export interface LevelUpFrame {
