@@ -26,6 +26,7 @@
     "test:update": "vitest run --update",
     "demo": "tsx scripts/demo.ts",
     "assets": "tsx scripts/assets.ts",
+    "preview": "tsx scripts/preview.ts",
     "all": "npm run lint && npm run typecheck && npm test && npm run build && npm run demo && npm run assets"
   },
   "devDependencies": {

@@ -175,6 +175,38 @@ suporte `node24`, o runtime de Actions em JavaScript mais novo do GitHub.
 **Dá para usar fora do GitHub Actions?** O código é uma biblioteca comum em TypeScript
 (`src/`). O caminho suportado, por enquanto, é a Action.
 
+### Prévia local
+
+Quer ver o card de alguém antes de instalar? Com Node 22 ou mais novo, clone o repositório e rode:
+
+```bash
+npm ci
+npm run preview -- --user seu-login
+```
+
+O card sai em `preview/` (os dois temas em SVG e PNG, mais os dados lidos em `seu-login.json`) e
+nada é comitado. Opções: `--lang en`, `--private` (soma as contribuições privadas, como
+`private-contributions`) e `--out outra-pasta`. Funciona igual no Windows (PowerShell) e no Linux.
+
+O token vem da variável `GITHUB_TOKEN` e, se ela estiver vazia, do GitHub CLI (`gh auth token`):
+quem já fez `gh auth login` não precisa configurar nada. Sem o `gh`, crie um token sem permissão
+nenhuma (a prévia só lê dados públicos) e defina a variável antes de rodar:
+
+```powershell
+# PowerShell (Windows)
+$env:GITHUB_TOKEN = "seu-token"
+npm run preview -- --user seu-login
+```
+
+```bash
+# bash/zsh (Linux, macOS)
+export GITHUB_TOKEN=seu-token
+npm run preview -- --user seu-login
+```
+
+Com `--private`, lembre que o GitHub só conta como privadas as contribuições que o token não
+enxerga. Com o seu próprio token (ou o do `gh`), o número tende a sair menor que o da Action.
+
 ### Como contribuir
 
 Contribuições são bem-vindas: linguagens que faltam no mapa de classes, arte, traduções,
@@ -182,9 +214,11 @@ correções. Veja o [CONTRIBUTING.md](CONTRIBUTING.md). Comandos principais:
 
 ```bash
 npm ci
-npm test        # testes (sem chamar a API)
-npm run demo    # gera os exemplos em examples/
-npm run build   # empacota a Action em dist/
+npm test                          # testes (sem chamar a API)
+npm run preview -- --user login   # card de qualquer pessoa em preview/, sem comitar
+npm run demo                      # exemplos em examples/ (SVG e PNG)
+npm run assets                    # logo, codorna, prévias sociais e GIF em assets/
+npm run build                     # empacota a Action em dist/
 ```
 
 ### Créditos
@@ -339,6 +373,40 @@ runs out, tells you when it resets. The next scheduled run fixes it on its own.
 **Does it work on self-hosted runners?** Yes, as long as the runner is up to date and supports
 `node24`, GitHub's newest runtime for JavaScript actions.
 
+### Local preview
+
+Want to see someone's card before installing? With Node 22 or newer, clone the repository and run:
+
+```bash
+npm ci
+npm run preview -- --user your-login
+```
+
+The card is written to `preview/` (both themes as SVG and PNG, plus the data it read in
+`your-login.json`) and nothing is committed. Options: `--lang en`, `--private` (adds private
+contributions, like `private-contributions`) and `--out other-folder`. It works the same on Windows
+(PowerShell) and Linux.
+
+The token comes from the `GITHUB_TOKEN` variable and, if it is empty, from the GitHub CLI
+(`gh auth token`): if you already ran `gh auth login`, there is nothing to set up. Without `gh`,
+create a token with no permissions at all (the preview only reads public data) and set the variable
+before running:
+
+```powershell
+# PowerShell (Windows)
+$env:GITHUB_TOKEN = "your-token"
+npm run preview -- --user your-login
+```
+
+```bash
+# bash/zsh (Linux, macOS)
+export GITHUB_TOKEN=your-token
+npm run preview -- --user your-login
+```
+
+With `--private`, keep in mind that GitHub only counts as private the contributions the token
+cannot see. With your own token (or the `gh` one), the number tends to be lower than in the Action.
+
 ### Contributing
 
 Contributions are welcome: missing languages in the class map, art, translations, fixes. See
@@ -346,9 +414,11 @@ Contributions are welcome: missing languages in the class map, art, translations
 
 ```bash
 npm ci
-npm test        # tests (no API calls)
-npm run demo    # writes the examples in examples/
-npm run build   # bundles the Action into dist/
+npm test                          # tests (no API calls)
+npm run preview -- --user login   # anyone's card in preview/, without committing
+npm run demo                      # examples in examples/ (SVG and PNG)
+npm run assets                    # logo, quail, social previews and GIF in assets/
+npm run build                     # bundles the Action into dist/
 ```
 
 ### Credits

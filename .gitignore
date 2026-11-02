@@ -5,3 +5,5 @@ coverage/
 .vscode/
 .idea/
 /tmp/
+# Prévias locais (npm run preview)
+/preview/
