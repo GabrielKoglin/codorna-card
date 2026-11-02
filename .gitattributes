@@ -1,4 +1,5 @@
 * text=auto eol=lf
 *.png binary
+*.gif binary
 dist/** -diff linguist-generated=true
 tests/__snapshots__/** linguist-generated=true

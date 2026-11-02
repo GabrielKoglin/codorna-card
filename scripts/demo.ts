@@ -1,18 +1,21 @@
 /**
- * Gera os cards de exemplo em `examples/` a partir das fixtures (sem chamar a API).
+ * Gera os cards de exemplo em `examples/` (SVG e PNG) a partir das fixtures, sem chamar a API.
+ * O PNG sai do rasterizador do projeto, pixel a pixel igual ao SVG; arquivo que não mudou não
+ * é regravado.
  * Uso: npm run demo
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildCharacter } from '../src/game/character'
 import { formatNumber, strings } from '../src/i18n'
 import { renderCard } from '../src/render/card'
 import type { Lang, PlayerData, ThemeName } from '../src/types'
+import { size, writeIfChanged, writePngIfChanged } from './lib/files'
+import { rasterizeSvg } from './lib/raster'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const examples = join(root, 'examples')
-mkdirSync(examples, { recursive: true })
 
 const fixtures = ['iniciante', 'veterano'] as const
 const themes: ThemeName[] = ['dark', 'light']
@@ -30,10 +33,16 @@ for (const name of fixtures) {
   )
   for (const theme of themes) {
     for (const lang of langs) {
-      const file = `${name}-${theme}-${lang}.svg`
+      const base = join(examples, `${name}-${theme}-${lang}`)
       const svg = renderCard(character, { theme, lang })
-      writeFileSync(join(examples, file), svg)
-      console.log(`  examples/${file} (${(Buffer.byteLength(svg) / 1024).toFixed(1)} KB)`)
+      const changed = [
+        writeIfChanged(`${base}.svg`, svg),
+        writePngIfChanged(`${base}.png`, rasterizeSvg(svg)),
+      ]
+      console.log(
+        `  examples/${name}-${theme}-${lang}.svg (${size(Buffer.byteLength(svg))}) + .png ` +
+          `(${size(statSync(`${base}.png`).size)})${changed.some(Boolean) ? '' : ' sem mudança'}`,
+      )
     }
   }
 }
