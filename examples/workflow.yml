@@ -1,0 +1,29 @@
+# Guild Card: copie este arquivo para .github/workflows/guild-card.yml
+# no repositório do seu perfil (o que tem o mesmo nome do seu usuário).
+# Copy this file to .github/workflows/guild-card.yml in your profile repository.
+name: Guild Card
+
+on:
+  schedule:
+    - cron: '23 4 * * *' # todo dia às 04:23 UTC / every day at 04:23 UTC
+  workflow_dispatch: # botão "Run workflow" / manual run
+
+permissions:
+  contents: write # para comitar o SVG / to commit the SVG
+
+concurrency:
+  group: guild-card
+  cancel-in-progress: false
+
+jobs:
+  guild-card:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: GabrielKoglin/guild-card@v1
+        # Tudo opcional / everything is optional:
+        # with:
+        #   theme: both          # dark | light | both
+        #   lang: en             # pt-BR | en
+        #   output: guild-card.svg
+        #   username: outro-login
