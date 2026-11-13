@@ -81,7 +81,43 @@
       <section id="resultado" class="cartao" aria-labelledby="passo-instalar" hidden>
         <h2 id="passo-instalar" data-t="step2">2. Instale em 3 cliques</h2>
         <p id="aviso-api" class="dica" role="status"></p>
-        <ol class="passos">
+        <ol id="caminho-modelo" class="passos" hidden>
+          <li>
+            <div>
+              <strong data-t="modeloTitle">Criar o perfil com o card</strong>
+              <p class="dica" data-t="modeloHelp">
+                Cria o repositório do seu perfil já com tudo pronto. Na tela do GitHub, confira se
+                está Public e clique em Create repository.
+              </p>
+            </div>
+            <a
+              id="link-modelo"
+              class="botao principal"
+              target="_blank"
+              rel="noopener"
+              data-t="modeloButton"
+              >Criar meu perfil com o card</a
+            >
+          </li>
+          <li>
+            <div>
+              <strong data-t="gerarTitle">Gerar o card agora</strong>
+              <p class="dica" data-t="gerarHelp">
+                Abre a automação no seu perfil. Clique em Run workflow e, de novo, no botão verde
+                Run workflow. Em menos de um minuto o card aparece.
+              </p>
+            </div>
+            <a
+              id="link-gerar-modelo"
+              class="botao"
+              target="_blank"
+              rel="noopener"
+              data-t="gerarButton"
+              >Gerar o card agora</a
+            >
+          </li>
+        </ol>
+        <ol id="caminho-manual" class="passos">
           <li id="passo-repo">
             <div>
               <strong data-t="repoTitle">Repositório do perfil</strong>
@@ -124,6 +160,18 @@
             </div>
             <a id="link-readme" class="botao" target="_blank" rel="noopener" data-t="readmeButton"
               >Abrir o README</a
+            >
+          </li>
+          <li>
+            <div>
+              <strong data-t="gerarTitle">Gerar o card agora</strong>
+              <p class="dica" data-t="gerarManualHelp">
+                O card aparece sozinho depois do commit da automação. Se não aparecer em alguns
+                minutos, gere na mão: Run workflow e, de novo, o botão verde Run workflow.
+              </p>
+            </div>
+            <a id="link-gerar" class="botao" target="_blank" rel="noopener" data-t="gerarButton"
+              >Gerar o card agora</a
             >
           </li>
         </ol>
