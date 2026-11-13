@@ -10,6 +10,8 @@ import {
   installLinks,
   publishedCardUrl,
   readmeSnippet,
+  runWorkflowLink,
+  templateRepoLink,
   workflowYaml,
   type InstallOptions,
   type InstallTheme,
@@ -35,6 +37,17 @@ const TEXTOS: Record<PageLang, Record<string, string>> = {
     privateHelp:
       'Só o total entra, sem nenhum nome de repositório. Ligue também no seu perfil: acima do gráfico de contribuições, Contribution settings → Private contributions.',
     step2: '2. Instale em 3 cliques',
+    step2Template: '2. Instale em 2 cliques',
+    modeloTitle: 'Criar o perfil com o card',
+    modeloHelp:
+      'Cria o repositório do seu perfil já com tudo pronto. Na tela do GitHub, confira se está Public e clique em Create repository.',
+    modeloButton: 'Criar meu perfil com o card',
+    gerarTitle: 'Gerar o card agora',
+    gerarHelp:
+      'Abre a automação no seu perfil. Clique em Run workflow e, de novo, no botão verde Run workflow. Em menos de um minuto o card aparece.',
+    gerarManualHelp:
+      'O card aparece sozinho depois do commit da automação. Se não aparecer em alguns minutos, gere na mão: Run workflow e, de novo, o botão verde Run workflow.',
+    gerarButton: 'Gerar o card agora',
     repoTitle: 'Repositório do perfil',
     repoHelp:
       'O card mora no repositório com o mesmo nome do seu usuário. Só precisa criar se ainda não existir: deixe público e clique em Create repository.',
@@ -82,6 +95,17 @@ const TEXTOS: Record<PageLang, Record<string, string>> = {
     privateHelp:
       'Only the total counts, no repository names. Also turn it on in your profile: above the contribution graph, Contribution settings → Private contributions.',
     step2: '2. Install in 3 clicks',
+    step2Template: '2. Install in 2 clicks',
+    modeloTitle: 'Create your profile with the card',
+    modeloHelp:
+      'Creates your profile repository with everything ready. On GitHub, check it is Public and click Create repository.',
+    modeloButton: 'Create my profile with the card',
+    gerarTitle: 'Generate the card now',
+    gerarHelp:
+      'Opens the automation on your profile. Click Run workflow, then the green Run workflow button. The card shows up in under a minute.',
+    gerarManualHelp:
+      'The card shows up by itself after the automation commit. If it does not after a few minutes, run it by hand: Run workflow, then the green Run workflow button.',
+    gerarButton: 'Generate the card now',
     repoTitle: 'Profile repository',
     repoHelp:
       'The card lives in the repository named after your username. Create it only if it does not exist yet: keep it public and click Create repository.',
@@ -151,6 +175,15 @@ function atualizar(): void {
   $<HTMLAnchorElement>('link-repo').href = links.createRepo
   $<HTMLAnchorElement>('link-workflow').href = links.installWorkflow
   $<HTMLAnchorElement>('link-readme').href = links.readme
+  // Sem o repositório do perfil, o caminho do modelo: 2 cliques e nada pra colar.
+  const semRepo = repo.exists === false
+  $('caminho-modelo').hidden = !semRepo
+  $('caminho-manual').hidden = semRepo
+  $<HTMLAnchorElement>('link-modelo').href = templateRepoLink(login, opcoes.lang)
+  for (const id of ['link-gerar', 'link-gerar-modelo']) {
+    $<HTMLAnchorElement>(id).href = runWorkflowLink(login)
+  }
+  $('passo-instalar').textContent = semRepo ? t('step2Template') : t('step2')
   $('trecho').textContent = readmeSnippet(opcoes.theme)
   $('workflow').textContent = workflowYaml(opcoes)
   $('aviso-api').textContent = avisoApi ? t(avisoApi) : ''
