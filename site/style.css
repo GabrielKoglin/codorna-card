@@ -1,0 +1,352 @@
+/* As cores do Codorna Card: carvão, âmbar e creme. Contraste conferido: creme sobre carvão
+   ~13:1; âmbar sobre carvão ~6:1; carvão sobre âmbar ~6:1. */
+:root {
+  --carvao: #1e1a16;
+  --cartao: #2a241e;
+  --borda: #4a3f33;
+  --creme: #f3ecda;
+  --apagado: #c9bfae;
+  --ambar: #e0a24a;
+  --ambar-forte: #f0b55e;
+  --erro: #ffb4a8;
+  --feito: #8fd18a;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--carvao);
+  color: var(--creme);
+  font:
+    16px/1.55 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+a {
+  color: var(--ambar-forte);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ambar-forte);
+  outline-offset: 2px;
+}
+
+.topo,
+main,
+footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 32px;
+  padding-bottom: 8px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Uma moldura em pixel, como a do card. */
+.moldura {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  background:
+    linear-gradient(var(--ambar) 0 0) 8px 8px / 32px 32px no-repeat,
+    linear-gradient(var(--borda) 0 0);
+  clip-path: polygon(
+    8px 0,
+    40px 0,
+    40px 4px,
+    44px 4px,
+    44px 8px,
+    48px 8px,
+    48px 40px,
+    44px 40px,
+    44px 44px,
+    40px 44px,
+    40px 48px,
+    8px 48px,
+    8px 44px,
+    4px 44px,
+    4px 40px,
+    0 40px,
+    0 8px,
+    4px 8px,
+    4px 4px,
+    8px 4px
+  );
+  image-rendering: pixelated;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+h1 + p {
+  margin: 4px 0 0;
+  color: var(--apagado);
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+}
+
+.idioma {
+  display: flex;
+  gap: 4px;
+}
+
+.idioma button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 2px solid var(--borda);
+  background: transparent;
+  color: var(--creme);
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idioma button[aria-pressed='true'] {
+  border-color: var(--ambar);
+  color: var(--ambar-forte);
+}
+
+.cartao {
+  background: var(--cartao);
+  border: 2px solid var(--borda);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+}
+
+.linha {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--creme);
+  background: var(--carvao);
+  border: 2px solid var(--borda);
+  border-radius: 6px;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+#login {
+  flex: 1;
+  min-width: 0;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--erro);
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 20px 0 0;
+}
+
+legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.opcoes label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.marcar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.marcar input {
+  width: 22px;
+  min-height: 22px;
+  accent-color: var(--ambar);
+}
+
+.dica {
+  color: var(--apagado);
+  font-size: 0.95rem;
+  margin: 4px 0 0;
+}
+
+.erro {
+  color: var(--erro);
+  margin: 8px 0 0;
+}
+
+.botao,
+button.principal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 2px solid var(--ambar);
+  color: var(--ambar-forte);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.principal,
+button.principal,
+.botao.principal {
+  background: var(--ambar);
+  color: var(--carvao);
+}
+
+.botao.pequeno {
+  min-height: 36px;
+  padding: 4px 12px;
+  margin-top: 8px;
+}
+
+.passos {
+  list-style: none;
+  counter-reset: passo;
+  padding: 0;
+  margin: 0;
+}
+
+.passos li {
+  counter-increment: passo;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 12px 16px;
+  padding: 16px 0 16px 44px;
+  border-top: 1px solid var(--borda);
+  position: relative;
+}
+
+.passos li::before {
+  content: counter(passo);
+  position: absolute;
+  left: 0;
+  top: 16px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--borda);
+  font-weight: 700;
+}
+
+.passos li.feito::before {
+  content: '✓';
+  background: var(--feito);
+  color: var(--carvao);
+}
+
+.passos li.feito .botao {
+  opacity: 0.75;
+}
+
+.trecho {
+  background: var(--carvao);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 8px 0 0;
+  overflow-x: auto;
+  white-space: pre;
+  font:
+    0.9rem/1.5 ui-monospace,
+    'Cascadia Code',
+    Consolas,
+    monospace;
+}
+
+details {
+  margin-top: 12px;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--ambar-forte);
+  min-height: 32px;
+}
+
+#previa-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 8px;
+  image-rendering: pixelated;
+}
+
+footer {
+  color: var(--apagado);
+  font-size: 0.9rem;
+  padding-bottom: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 560px) {
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .linha {
+    flex-direction: column;
+  }
+  .passos li {
+    grid-template-columns: 1fr;
+  }
+}

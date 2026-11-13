@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Instalar o Codorna Card</title>
+    <meta
+      name="description"
+      content="Coloque o Codorna Card no README do seu perfil do GitHub em 3 cliques, sem copiar código."
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="marca">
+        <span class="moldura" aria-hidden="true"></span>
+        <div>
+          <h1 data-t="title">Instalar o Codorna Card</h1>
+          <p data-t="subtitle">Seu GitHub vira um card de RPG em pixel art, em 3 cliques.</p>
+        </div>
+      </div>
+      <div class="idioma" role="group" aria-label="Idioma da página / Page language">
+        <button type="button" data-page-lang="pt-BR" aria-pressed="true">PT</button>
+        <button type="button" data-page-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="cartao" aria-labelledby="passo-login">
+        <h2 id="passo-login" data-t="step1">1. Quem é você no GitHub?</h2>
+        <form id="form" novalidate>
+          <label for="login" data-t="loginLabel">Seu usuário do GitHub</label>
+          <div class="linha">
+            <input
+              id="login"
+              name="login"
+              autocomplete="username"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="ex.: octocat"
+              aria-describedby="login-erro"
+              required
+            />
+            <button type="submit" class="principal" data-t="go">Continuar</button>
+          </div>
+          <p id="login-erro" class="erro" role="alert" hidden></p>
+
+          <fieldset>
+            <legend data-t="options">Opções do card</legend>
+            <div class="opcoes">
+              <label
+                ><span data-t="theme">Tema</span>
+                <select id="tema">
+                  <option value="dark" data-t="themeDark">Escuro</option>
+                  <option value="light" data-t="themeLight">Claro</option>
+                  <option value="both" data-t="themeBoth">
+                    Os dois (segue o tema de quem visita)
+                  </option>
+                </select>
+              </label>
+              <label
+                ><span data-t="cardLang">Idioma do card</span>
+                <select id="lingua">
+                  <option value="pt-BR">Português</option>
+                  <option value="en">English</option>
+                </select>
+              </label>
+            </div>
+            <label class="marcar">
+              <input type="checkbox" id="privadas" />
+              <span data-t="private">Contar as minhas contribuições privadas</span>
+            </label>
+            <p class="dica" data-t="privateHelp">
+              Só o total entra, sem nenhum nome de repositório. Ligue também no seu perfil: acima do
+              gráfico de contribuições, Contribution settings → Private contributions.
+            </p>
+          </fieldset>
+        </form>
+      </section>
+
+      <section id="resultado" class="cartao" aria-labelledby="passo-instalar" hidden>
+        <h2 id="passo-instalar" data-t="step2">2. Instale em 3 cliques</h2>
+        <p id="aviso-api" class="dica" role="status"></p>
+        <ol class="passos">
+          <li id="passo-repo">
+            <div>
+              <strong data-t="repoTitle">Repositório do perfil</strong>
+              <p class="dica" id="repo-dica" data-t="repoHelp">
+                O card mora no repositório com o mesmo nome do seu usuário. Só precisa criar se
+                ainda não existir: deixe público e clique em Create repository.
+              </p>
+            </div>
+            <a id="link-repo" class="botao" target="_blank" rel="noopener" data-t="repoButton"
+              >Criar meu repositório de perfil</a
+            >
+          </li>
+          <li>
+            <div>
+              <strong data-t="workflowTitle">A automação</strong>
+              <p class="dica" data-t="workflowHelp">
+                Abre o arquivo já escrito. Clique em Commit changes: o card é gerado na hora e,
+                depois, todo dia.
+              </p>
+            </div>
+            <a
+              id="link-workflow"
+              class="botao principal"
+              target="_blank"
+              rel="noopener"
+              data-t="workflowButton"
+              >Instalar a automação</a
+            >
+          </li>
+          <li>
+            <div>
+              <strong data-t="readmeTitle">Mostrar no perfil</strong>
+              <p class="dica" id="readme-dica" data-t="readmeHelp">
+                Cole esta linha no seu README, onde quiser que o card apareça, e clique em Commit
+                changes.
+              </p>
+              <pre id="trecho" class="trecho"></pre>
+              <button type="button" id="copiar" class="botao pequeno" data-t="copy">Copiar</button>
+              <span id="copiado" class="dica" role="status"></span>
+            </div>
+            <a id="link-readme" class="botao" target="_blank" rel="noopener" data-t="readmeButton"
+              >Abrir o README</a
+            >
+          </li>
+        </ol>
+        <details>
+          <summary data-t="seeWorkflow">Ver o arquivo da automação</summary>
+          <pre id="workflow" class="trecho"></pre>
+        </details>
+      </section>
+
+      <section id="previa" class="cartao" aria-labelledby="titulo-previa" hidden>
+        <h2 id="titulo-previa" data-t="previewTitle">Prévia</h2>
+        <p id="previa-legenda" class="dica"></p>
+        <img id="previa-img" alt="" width="640" height="360" />
+      </section>
+    </main>
+
+    <footer>
+      <a href="https://github.com/GabrielKoglin/codorna-card" data-t="source"
+        >Código e regras do card</a
+      >
+      <span aria-hidden="true">·</span>
+      <span data-t="noServer">Sem servidor e sem cadastro: tudo roda no seu próprio GitHub.</span>
+    </footer>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
