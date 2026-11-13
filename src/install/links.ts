@@ -129,3 +129,32 @@ export function publishedCardUrl(login: string, theme: InstallTheme): string {
   const file = theme === 'both' ? 'codorna-card-dark.svg' : 'codorna-card.svg'
   return `https://raw.githubusercontent.com/${name}/${name}/HEAD/${file}`
 }
+
+/** O repositório modelo: o perfil já com o workflow, o README e um card provisório. */
+export const TEMPLATE_OWNER = 'GabrielKoglin'
+export const TEMPLATE_NAME = 'codorna-card-perfil'
+
+/**
+ * Cria o repositório do perfil (login/login) a partir do modelo, público: um clique em
+ * Create repository e o perfil já vem com tudo. Para quem ainda não tem o repositório.
+ */
+export function templateRepoLink(login: string, lang: Lang = DEFAULT_OPTIONS.lang): string {
+  const description = lang === 'en' ? 'My GitHub profile' : 'Meu perfil no GitHub'
+  return `https://github.com/new?${query({
+    template_owner: TEMPLATE_OWNER,
+    template_name: TEMPLATE_NAME,
+    owner: login,
+    name: login,
+    visibility: 'public',
+    description,
+  })}`
+}
+
+/**
+ * A página do workflow no perfil, onde fica o botão Run workflow: gera o card na hora,
+ * sem esperar o horário do dia. Serve para os dois caminhos (modelo e manual).
+ */
+export function runWorkflowLink(login: string): string {
+  const name = encodeURIComponent(login)
+  return `https://github.com/${name}/${name}/actions/workflows/codorna-card.yml`
+}
