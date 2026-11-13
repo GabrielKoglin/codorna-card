@@ -7,3 +7,4 @@ coverage/
 /tmp/
 # Prévias locais (npm run preview)
 /preview/
+site-dist/

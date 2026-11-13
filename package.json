@@ -1,7 +1,7 @@
 {
   "name": "codorna-card",
   "version": "0.1.0",
-  "description": "GitHub Action que transforma sua atividade pública no GitHub em um card de RPG em pixel art para o README do perfil.",
+  "description": "GitHub Action que transforma sua atividade pÃºblica no GitHub em um card de RPG em pixel art para o README do perfil.",
   "keywords": [
     "github-action",
     "readme",
@@ -21,12 +21,14 @@
     "build": "ncc build src/main.ts -o dist --license licenses.txt",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p site",
     "test": "vitest run",
     "test:update": "vitest run --update",
     "demo": "tsx scripts/demo.ts",
     "assets": "tsx scripts/assets.ts",
     "preview": "tsx scripts/preview.ts",
+    "site": "vite --config site/vite.config.ts",
+    "site:build": "vite build --config site/vite.config.ts",
     "all": "npm run lint && npm run typecheck && npm test && npm run build && npm run demo && npm run assets"
   },
   "devDependencies": {
