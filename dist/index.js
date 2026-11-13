@@ -3482,7 +3482,6 @@ const RANK_METALS = {
 
 
 
-
 const CARD_WIDTH = 640;
 const CARD_HEIGHT = 360;
 /** Retângulo com cantos "arredondados" em degraus de pixel. */
@@ -3492,6 +3491,10 @@ function steppedRect(x, y, w, h, step) {
         `h-${w - 4 * s}v-${s}h-${s}v-${s}h-${s}v-${h - 4 * s}h${s}v-${s}h${s}z`);
 }
 const CORNER_GEM = ['..##..', '.#gg#.', '#gwgg#', '#gggg#', '.#gg#.', '..##..'];
+/** Público + o que o modo completo leu dos repositórios privados (sem teto, como o rodapé). */
+function allOf(count) {
+    return count.raw + count.privateRaw;
+}
 /** Junta os itens do rodapé: "16.772 commits · 1.612 PRs mesclados". */
 function statText(items) {
     return items.map(([value, label]) => `${value} ${label}`).join(' · ');
@@ -3502,20 +3505,21 @@ const FOOTER_SCALE = 2;
 /**
  * Números do rodapé, do jeito mais completo que couber: rótulos longos; depois "PRs" no lugar de
  * "PRs mesclados"; depois números compactos (16,7k); em último caso, menos itens. Issues ficam
- * de fora (estão no resumo do job e na descrição acessível). Commits, PRs e reviews são os
- * públicos. As privadas viram um total só ("N privadas", a soma das anônimas do perfil e das do
- * modo completo) e só aparecem quando existem, o que exige `private-contributions` ou
- * `private-token`.
+ * de fora (estão no resumo do job e na descrição acessível). Commits, PRs e reviews somam o
+ * público e o que o modo completo (`private-token`) leu dos repositórios privados: é o trabalho
+ * da pessoa, onde quer que esteja. "N privadas" fica só com as contribuições anônimas do perfil
+ * (`private-contributions`), as que nem o token enxerga, pra nada ser contado duas vezes; e só
+ * aparece quando existe.
  */
 function footerStats(character, lang, maxWidth = FOOTER_WIDTH) {
     const t = strings(lang);
     const activity = character.activity;
     const entries = [
-        [activity.commits.raw, t.card.stats.commits, t.card.stats.commits],
-        [activity.merged.raw, t.card.stats.merged, t.card.stats.mergedShort],
-        [activity.reviews.raw, t.card.stats.reviews, t.card.stats.reviews],
+        [allOf(activity.commits), t.card.stats.commits, t.card.stats.commits],
+        [allOf(activity.merged), t.card.stats.merged, t.card.stats.mergedShort],
+        [allOf(activity.reviews), t.card.stats.reviews, t.card.stats.reviews],
     ];
-    const privateCount = privateTotal(activity);
+    const privateCount = activity.privateContributions.raw;
     if (privateCount > 0)
         entries.push([privateCount, t.card.stats.private, t.card.stats.private]);
     const fits = (items) => measure(statText(items)) * FOOTER_SCALE <= maxWidth;
@@ -3745,7 +3749,7 @@ function drawCard(canvas, character, options) {
     else {
         canvas.text(t.card.noLanguages, bottomX, 298, { fill: theme.muted });
     }
-    // Números públicos (e o total de privadas, quando alguma das opções privadas está ligada).
+    // Os números (público + modo completo) e as privadas anônimas, quando existem.
     let sx = bottomX;
     footerStats(character, options.lang, bottomW).forEach(([value, label], i) => {
         if (i > 0)
@@ -3754,13 +3758,18 @@ function drawCard(canvas, character, options) {
         sx += canvas.text(` ${label}`, sx, 326, { fill: theme.muted });
     });
     const activity = character.activity;
+    // Os mesmos números do rodapé (público + modo completo), mais as issues.
+    const commits = allOf(activity.commits);
+    const merged = allOf(activity.merged);
+    const reviews = allOf(activity.reviews);
+    const issues = allOf(activity.issues);
     const descItems = [
-        [numberText(activity.commits.raw), t.card.stats.commits(activity.commits.raw)],
-        [numberText(activity.merged.raw), t.card.stats.merged(activity.merged.raw)],
-        [numberText(activity.reviews.raw), t.card.stats.reviews(activity.reviews.raw)],
-        [numberText(activity.issues.raw), t.card.stats.issues(activity.issues.raw)],
+        [numberText(commits), t.card.stats.commits(commits)],
+        [numberText(merged), t.card.stats.merged(merged)],
+        [numberText(reviews), t.card.stats.reviews(reviews)],
+        [numberText(issues), t.card.stats.issues(issues)],
     ];
-    const privateCount = privateTotal(activity);
+    const privateCount = activity.privateContributions.raw;
     if (privateCount > 0)
         descItems.push([numberText(privateCount), t.card.stats.privateLong(privateCount)]);
     const descStats = statText(descItems);

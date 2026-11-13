@@ -184,10 +184,11 @@ logs (`::add-mask::`), como o `@actions/core` faz.
 autorizado, ou que o token não consegue ler, é pulado inteiro (nem commits nem linguagens), e o
 log diz só **quantos** foram pulados, nunca quais.
 
-**No card.** O trabalho privado aparece só no total do rodapé, `N privadas`, que soma as anônimas
-(com `private-contributions`) e commits, issues, PRs abertos e reviews do modo completo. Os outros
-números do rodapé (commits, PRs mesclados, reviews) continuam sendo os públicos. O resumo do job
-ganha a coluna "Privado", só com totais.
+**No card.** Os números do rodapé (commits, PRs mesclados, reviews) e as issues da descrição
+acessível somam o público e o que o modo completo leu: é o seu trabalho, onde quer que esteja,
+sem nenhum nome privado. O `N privadas` fica só com as anônimas (com `private-contributions`),
+as que nem o token enxerga, pra nada ser contado duas vezes. O resumo do job ganha a coluna
+"Privado", só com totais.
 
 ## Nível
 

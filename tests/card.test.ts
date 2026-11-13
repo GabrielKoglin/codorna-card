@@ -163,7 +163,7 @@ describe('rodapé', () => {
     expect(svg).toContain('2.494 reviews · 512 issues · 3.456 contribuições privadas.')
   })
 
-  it('modo completo: os números públicos não mudam e as privadas somam tudo num total', () => {
+  it('modo completo: os números somam o privado e as privadas ficam só com as anônimas', () => {
     const base = fixture('iniciante')
     const character = buildCharacter({
       ...base,
@@ -185,12 +185,16 @@ describe('rodapé', () => {
         skippedRepositories: 0,
       },
     })
-    // 6 anônimas + 1.200 commits + 4 issues + 30 PRs + 20 reviews.
+    // Commits 169 + 1.200, PRs mesclados 3 + 25, reviews 1 + 20, issues 3 + 4;
+    // "privadas" fica só com as 6 anônimas, que o token não enxerga.
+    // No rodapé não cabe "PRs mesclados": encurta pra "PRs".
     expect(statText(footerStats(character, 'pt-BR'))).toBe(
-      '169 commits · 3 PRs mesclados · 1 review · 1.260 privadas',
+      '1.369 commits · 28 PRs · 21 reviews · 6 privadas',
     )
     const svg = renderCard(character, { theme: 'light', lang: 'en' })
-    expect(svg).toContain('1 review · 3 issues · 1,260 private contributions.')
+    expect(svg).toContain(
+      '1,369 commits · 28 merged PRs · 21 reviews · 7 issues · 6 private contributions.',
+    )
     // O teto diário vale para a soma: 07-01 tinha 2 públicos e ganha 8; 07-02 ganha 10.
     const publicOnly = buildCharacter(base).activity.commits
     expect(character.activity.commits.counted).toBe(publicOnly.counted + 8 + 10)

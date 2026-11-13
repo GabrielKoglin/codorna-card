@@ -184,8 +184,11 @@ describe('prévia de ponta a ponta (API falsa)', () => {
     ].join('\n')
     for (const secret of SECRET_NAMES) expect(outputs, secret).not.toContain(secret)
     expect(outputs).not.toContain(privateToken)
+    // "Privadas" no card são só as anônimas, que nem o token enxerga; o resto entra nos números.
+    const anonimas = result?.character.activity.privateContributions.raw ?? 0
+    expect(anonimas).toBeGreaterThan(0)
     expect(readFileSync(join(cwd, 'preview', 'Pixel-Dev-dark.svg'), 'utf8')).toContain(
-      '45 contribuições privadas',
+      `${anonimas} contribuições privadas`,
     )
     // O token privado só fez consultas privadas.
     for (const call of fake.calls.filter((c) => c.token === privateToken)) {

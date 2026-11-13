@@ -141,8 +141,10 @@ privados, **com as mesmas regras e tetos do público**, usando um token pessoal 
 - **Os tetos valem para a soma:** só os 10 primeiros commits de cada dia contam, somando público
   e privado do mesmo dia; os tetos anuais valem para a soma do ano.
 - **Privacidade:** nenhum nome de repositório, organização, branch, mensagem de commit ou título
-  aparece no card, nos logs, no resumo ou nas saídas. O card mostra só o total, como
-  "1.260 privadas", e o resumo do job ganha uma coluna "Privado". O token é mascarado nos logs.
+  aparece no card, nos logs, no resumo ou nas saídas. No card, os números de commits, PRs e
+  reviews passam a somar o público e o privado (só totais); "N privadas" fica só com as
+  anônimas que nem o token enxerga. O resumo do job ganha uma coluna "Privado". O token é
+  mascarado nos logs.
 - **Só leitura:** o `private-token` nunca escreve nada; o commit do SVG continua com o
   `GITHUB_TOKEN` (entrada `token`).
 - **Junto com `private-contributions`:** pode ligar os dois. Com o token, o total anônimo é lido

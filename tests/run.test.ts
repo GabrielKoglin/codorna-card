@@ -199,7 +199,7 @@ describe('modo completo na Action (private-token)', () => {
     return { ws, fake, result, everything, ...log }
   }
 
-  it('soma o trabalho privado com os tetos sobre a soma e mostra só o total no card', async () => {
+  it('soma o trabalho privado com os tetos sobre a soma e mostra os totais no card', async () => {
     const { result } = await fullRun()
     const c = result.character
     // Commits: 2024-06-01 15→10; 2025-01-15 4+3=7; 2025-03-01 25→10; 2026-02-10 2; 2026-06-01 4.
@@ -215,9 +215,10 @@ describe('modo completo na Action (private-token)', () => {
     expect(c.activity.mergedElsewhere).toEqual({ raw: 2, privateRaw: 1, counted: 3 })
     expect(c.xp.total).toBe(66 + 12 + 45 + 32 + 90 + 30)
     const dark = result.files[0]!.content
-    // 34 commits + 4 PRs + 1 issue + 1 review privados.
-    expect(dark).toContain('40 contribuições privadas.')
-    expect(dark).toContain('19 commits · 7 PRs mesclados · 3 reviews · 2 issues · 40 contribuições')
+    // Os números somam o público e o privado: commits 19 + 34, PRs mesclados 7 + 2,
+    // reviews 3 + 1 e issues 2 + 1. Sem private-contributions, não há privadas anônimas.
+    expect(dark).toContain('53 commits · 9 PRs mesclados · 4 reviews · 3 issues.')
+    expect(dark).not.toContain('contribuições privadas')
   })
 
   it('nenhum nome privado vaza: SVG, logs, resumo e saídas', async () => {
