@@ -6,6 +6,10 @@ import {
   installLinks,
   publishedCardUrl,
   readmeSnippet,
+  runWorkflowLink,
+  templateRepoLink,
+  TEMPLATE_NAME,
+  TEMPLATE_OWNER,
   workflowYaml,
 } from '../src/install/links'
 
@@ -91,5 +95,28 @@ describe('página de instalação', () => {
       'https://raw.githubusercontent.com/maria-dev/maria-dev/HEAD/codorna-card.svg',
     )
     expect(publishedCardUrl('maria-dev', 'both')).toContain('/HEAD/codorna-card-dark.svg')
+  })
+})
+
+describe('caminho do modelo', () => {
+  it('cria o perfil a partir do modelo, com o nome do usuário e público', () => {
+    const p = params(templateRepoLink('mano-dev'))
+    expect(p.get('template_owner')).toBe(TEMPLATE_OWNER)
+    expect(p.get('template_name')).toBe(TEMPLATE_NAME)
+    expect(p.get('owner')).toBe('mano-dev')
+    expect(p.get('name')).toBe('mano-dev')
+    expect(p.get('visibility')).toBe('public')
+  })
+
+  it('a descrição segue o idioma', () => {
+    expect(params(templateRepoLink('a', 'en')).get('description')).toBe('My GitHub profile')
+    expect(params(templateRepoLink('a')).get('description')).toBe('Meu perfil no GitHub')
+  })
+
+  it('o botão de gerar agora abre o workflow no perfil da pessoa', () => {
+    expect(runWorkflowLink('mano-dev')).toBe(
+      'https://github.com/mano-dev/mano-dev/actions/workflows/codorna-card.yml',
+    )
+    expect(runWorkflowLink('mano-dev')).toContain(WORKFLOW_PATH.split('/').pop()!)
   })
 })
