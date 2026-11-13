@@ -37,6 +37,14 @@ esse trabalho também, com um token só de leitura e sem mostrar nenhum nome pri
   </tr>
 </table>
 
+### Instalar em 3 cliques
+
+**[Abra a página de instalação](https://gabrielkoglin.github.io/codorna-card/)**, digite o seu
+usuário e clique nos três botões: cada um abre o GitHub já preenchido (o repositório do perfil, o
+arquivo da automação e o README). Sem copiar código. O workflow que a página gera também roda
+sozinho quando o próprio arquivo é comitado (gatilho `push` restrito a
+`.github/workflows/codorna-card.yml`), então o card aparece logo depois do commit.
+
 ### Instalação em um passo
 
 No repositório do seu perfil (aquele com o mesmo nome do seu usuário, `seu-usuario/seu-usuario`),
@@ -377,6 +385,14 @@ read-only token and without showing any private name.
     <td><img alt="Veteran card, light theme" src="examples/veterano-light-en.svg" width="400"></td>
   </tr>
 </table>
+
+### Install in 3 clicks
+
+**[Open the install page](https://gabrielkoglin.github.io/codorna-card/)**, type your username and
+click the three buttons: each one opens GitHub already filled in (the profile repository, the
+automation file and the README). No code to copy. The workflow it generates also runs by itself
+when the file itself is committed (a `push` trigger limited to
+`.github/workflows/codorna-card.yml`), so the card shows up right after the commit.
 
 ### One-step install
 
