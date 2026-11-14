@@ -32,8 +32,13 @@ describe('página de instalação', () => {
     expect(yaml).toContain('  workflow_dispatch:')
     expect(yaml).toContain(`  push:\n    paths:\n      - ${WORKFLOW_PATH}\n`)
     expect(yaml).toContain('permissions:\n  contents: write')
-    expect(yaml.trimEnd().endsWith('- uses: GabrielKoglin/codorna-card@v1')).toBe(true)
-    expect(yaml).not.toContain('with:')
+    // As privadas vêm ligadas: sem a opção ligada no perfil, o GitHub devolve 0.
+    expect(yaml.trimEnd().endsWith('        with:\n          private-contributions: true')).toBe(
+      true,
+    )
+    const semPrivadas = workflowYaml({ ...DEFAULT_OPTIONS, privateContributions: false })
+    expect(semPrivadas.trimEnd().endsWith('- uses: GabrielKoglin/codorna-card@v1')).toBe(true)
+    expect(semPrivadas).not.toContain('with:')
   })
 
   it('as opções viram entradas da Action, só quando mudam o padrão', () => {
