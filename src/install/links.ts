@@ -17,7 +17,8 @@ export interface InstallOptions {
 export const DEFAULT_OPTIONS: InstallOptions = {
   theme: 'dark',
   lang: 'pt-BR',
-  privateContributions: false,
+  // Ligado: sem a opção ligada no perfil, o GitHub devolve 0 e nada muda.
+  privateContributions: true,
 }
 
 /** Onde o workflow mora no repositório do perfil. */
